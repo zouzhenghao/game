@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#05090d" />
+    <meta name="description" content="NEXUS STRIKE 零界突击——一款可直接在浏览器游玩的赛博科技风 3D 第一人称射击游戏。" />
+    <title>NEXUS STRIKE // 零界突击</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305090d'/%3E%3Cpath d='M14 46V18h8l12 17V18h8v28h-8L22 29v17z' fill='%2354f7d2'/%3E%3Cpath d='M46 18h5v28h-5z' fill='%2354f7d2'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+    <script type="module" crossorigin src="./assets/index-CLtOcLZo.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-B6xKaROM.css">
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas" aria-label="3D 游戏画面"></canvas>
+      <div class="noise"></div>
+      <div class="scanlines"></div>
+
+      <section id="menu-screen" class="screen menu-screen active">
+        <header class="topbar">
+          <a class="brand" href="#" aria-label="零界突击首页">
+            <span class="brand-mark"><i></i><i></i><i></i></span>
+            <span class="brand-word">NEXUS<span>//</span>STRIKE</span>
+          </a>
+          <nav class="nav-links" aria-label="游戏资料">
+            <button data-modal="briefing">作战简报</button>
+            <button data-modal="armory">武器库</button>
+            <button data-modal="controls">操作指南</button>
+          </nav>
+          <div class="top-actions">
+            <span class="server-status"><i></i> 本地作战系统在线</span>
+            <button id="audio-toggle" class="icon-button" title="切换音效" aria-label="切换音效">
+              <svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5Zm4 4a4 4 0 0 1 0 6m2-9a8 8 0 0 1 0 12"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <main class="hero">
+          <div class="hero-copy">
+            <div class="eyebrow"><span>NX-07</span> / 神经链接已建立</div>
+            <h1><span class="title-outline">零界</span><br />突击<span class="title-dot">.</span></h1>
+            <div class="english-title">NEXUS STRIKE</div>
+            <p class="hero-desc">城市防线已经失守。接入战术外骨骼，深入数据废墟，<br class="desktop-only" />在机械军团完成合围之前，撕开最后一道缺口。</p>
+            <div class="mode-selector" role="group" aria-label="选择游戏模式">
+              <button class="mode-card selected" data-mode="campaign">
+                <span class="mode-index">01</span>
+                <span><strong>核心行动</strong><small>10 波战斗 · 最终首领</small></span>
+                <i></i>
+              </button>
+              <button class="mode-card" data-mode="endless">
+                <span class="mode-index">02</span>
+                <span><strong>无尽裂隙</strong><small>持续增压 · 挑战极限</small></span>
+                <i></i>
+              </button>
+            </div>
+            <div class="hero-actions">
+              <button id="start-button" class="primary-button"><span>开始行动</span><b>ENTER</b><i>↗</i></button>
+              <button id="training-button" class="secondary-button"><span class="play-icon">▷</span> 模拟训练</button>
+            </div>
+            <div class="quick-controls"><span><kbd>WASD</kbd> 移动</span><span><kbd>鼠标</kbd> 瞄准</span><span><kbd>左键</kbd> 射击</span><span><kbd>Q</kbd> 相位冲刺</span></div>
+          </div>
+
+          <aside class="mission-panel">
+            <div class="panel-corners"></div>
+            <div class="mission-head"><span>当前作战区域</span><b>SECTOR 07</b></div>
+            <div class="sector-visual">
+              <div class="radar-rings"><i></i><i></i><i></i><span></span></div>
+              <div class="sector-code">N-35<br /><strong>07</strong></div>
+              <span class="sector-label label-a">封锁区</span><span class="sector-label label-b">信号未知</span>
+            </div>
+            <div class="mission-title"><small>OPERATION</small><h2>霓虹余烬</h2><span>NEON ASHES</span></div>
+            <div class="mission-data"><div><small>威胁等级</small><strong class="danger">极高 / 05</strong></div><div><small>作战时间</small><strong>夜间 02:17</strong></div></div>
+            <div class="mission-objective"><span>主要目标</span><p>清除区域内所有合成体单位<br />摧毁「守望者」核心</p></div>
+            <div class="panel-footer"><span><i></i> 区域扫描完成</span><b>35.6895° N</b></div>
+          </aside>
+        </main>
+
+        <footer class="menu-footer">
+          <div class="record"><small>个人最佳纪录</small><strong id="best-score">000,000</strong><span>PTS</span></div>
+          <div class="footer-line"></div>
+          <div class="system-info"><span>BUILD 1.0.7</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span></div>
+          <div class="scroll-cue">系统待命 <i></i></div>
+        </footer>
+      </section>
+
+      <section id="hud" class="hud" aria-label="游戏状态界面">
+        <div class="hud-top-left">
+          <div class="operative-tag"><span>NX</span><div><small>作战单位</small><strong>幽灵 // 07</strong></div></div>
+          <div class="vital-row"><span>HP</span><div class="vital-bar"><i id="health-fill"></i></div><b id="health-value">100</b></div>
+          <div class="vital-row shield"><span>SH</span><div class="vital-bar"><i id="shield-fill"></i></div><b id="shield-value">50</b></div>
+        </div>
+        <div class="wave-info"><small id="mode-label">核心行动</small><div>WAVE <strong id="wave-value">01</strong><span id="wave-total">/ 10</span></div><p><i></i><span id="enemy-count">0 个敌对信号</span><i></i></p></div>
+        <div class="hud-top-right"><div class="score-box"><small>作战积分</small><strong id="score-value">000000</strong><span id="combo-value">× 1.0</span></div><canvas id="radar" width="150" height="150" aria-label="战术雷达"></canvas></div>
+        <div id="boss-hud" class="boss-hud"><div><span>守望者 // WARDEN</span><b>首领单位</b></div><div class="boss-bar"><i id="boss-fill"></i></div></div>
+        <div id="objective" class="objective"><small>当前目标</small><strong>清除区域内敌人</strong><span>保持移动，注意侧翼</span></div>
+        <div id="kill-feed" class="kill-feed"></div>
+        <div id="announcer" class="announcer"><small></small><strong></strong><p></p></div>
+        <div id="crosshair" class="crosshair"><i></i><i></i><i></i><i></i><b></b><span id="hitmarker"></span></div>
+        <div class="hud-bottom-left"><div class="ability" id="ability-dash"><kbd>Q</kbd><div><strong>相位冲刺</strong><span><i></i></span></div><b class="ability-status">就绪</b></div><div class="ability" id="ability-pulse"><kbd>E</kbd><div><strong>电磁脉冲</strong><span><i></i></span></div><b class="ability-status">就绪</b></div></div>
+        <div class="weapon-hud"><div class="weapon-slots"><span data-slot="0" class="active">1</span><span data-slot="1">2</span><span data-slot="2">3</span></div><small id="weapon-class">突击步枪 // AUTO</small><h2 id="weapon-name">VX-9 <span>脉冲</span></h2><div class="ammo"><strong id="ammo-value">30</strong><span>/ <b id="reserve-value">180</b></span></div><div id="reload-hint" class="reload-hint">按 R 装填弹药</div></div>
+        <button id="pause-button" class="hud-pause" aria-label="暂停游戏">Ⅱ</button>
+        <div id="damage-vignette" class="damage-vignette"></div>
+        <div id="damage-direction" class="damage-direction">⌄</div>
+        <div id="interact-toast" class="interact-toast"></div>
+
+        <div id="mobile-controls" class="mobile-controls">
+          <div id="move-stick" class="touch-stick"><i></i><span>移动</span></div>
+          <div id="look-zone" class="look-zone"></div>
+          <button id="mobile-fire" class="mobile-fire" aria-label="开火"><i></i><span>FIRE</span></button>
+          <button id="mobile-reload" class="mobile-small reload" aria-label="装填">R</button>
+          <button id="mobile-dash" class="mobile-small dash" aria-label="冲刺">Q</button>
+          <button id="mobile-pulse" class="mobile-small pulse" aria-label="脉冲">E</button>
+          <button id="mobile-switch" class="mobile-small switch" aria-label="切换武器">⇄</button>
+        </div>
+      </section>
+
+      <section id="pause-screen" class="screen overlay-screen">
+        <div class="overlay-card pause-card"><div class="eyebrow">TACTICAL LINK / SUSPENDED</div><h2>行动暂停<span>.</span></h2><p>神经链接保持中，战场时间已冻结。</p><button id="resume-button" class="primary-button"><span>继续行动</span><b>ESC</b><i>↗</i></button><button id="restart-button" class="secondary-button wide">重新开始</button><button id="quit-button" class="text-button">撤离至主菜单</button><div class="pause-tip">提示：冲刺期间可免疫所有伤害</div></div>
+      </section>
+
+      <section id="upgrade-screen" class="screen overlay-screen">
+        <div class="upgrade-wrap"><div class="eyebrow">COMBAT ADAPTATION / AVAILABLE</div><h2>选择战术强化<span>.</span></h2><p>波次清除。选择一项模块，强化本次行动。</p><div id="upgrade-options" class="upgrade-options"></div><small class="upgrade-hint">按数字键 1—3 快速选择</small></div>
+      </section>
+
+      <section id="end-screen" class="screen overlay-screen">
+        <div class="overlay-card end-card"><div id="end-eyebrow" class="eyebrow">SIGNAL LOST / OPERATION FAILED</div><h2 id="end-title">连接中断<span>.</span></h2><p id="end-desc">你的作战信号已消失，但裂隙仍在扩张。</p><div class="end-stats"><div><small>最终积分</small><strong id="end-score">0</strong></div><div><small>抵达波次</small><strong id="end-wave">01</strong></div><div><small>消灭单位</small><strong id="end-kills">0</strong></div><div><small>命中率</small><strong id="end-accuracy">0%</strong></div></div><div id="new-record" class="new-record">NEW PERSONAL RECORD // 新纪录</div><button id="retry-button" class="primary-button"><span>再次出击</span><b>↻</b><i>↗</i></button><button id="end-quit-button" class="text-button">返回主菜单</button></div>
+      </section>
+
+      <div id="modal-backdrop" class="modal-backdrop">
+        <div class="info-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button id="modal-close" class="modal-close" aria-label="关闭">×</button><div id="modal-content"></div></div>
+      </div>
+      <div id="rotate-notice">旋转设备以获得更佳作战体验</div>
+    </div>
+  </body>
+</html>
