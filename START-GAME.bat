@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
-title NEXUS STRIKE - Game Launcher
+title NEXUS STRIKE V2.0 - Game Launcher
 set "PORT=4173"
 
 echo ============================================================

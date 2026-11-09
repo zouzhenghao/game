@@ -10,14 +10,35 @@ const WEAPONS = [
   { id: 'rifle', name: 'VX-9 脉冲', label: 'VX-9 <span>脉冲</span>', className: '突击步枪 // AUTO', damage: 24, fireRate: 9, magazine: 30, reserve: 180, reload: 1.45, spread: 0.009, pellets: 1, auto: true, range: 90 },
   { id: 'shotgun', name: 'SG-12 裂解', label: 'SG-12 <span>裂解</span>', className: '战术霰弹枪 // PUMP', damage: 14, fireRate: 1.2, magazine: 6, reserve: 42, reload: 1.8, spread: 0.065, pellets: 8, auto: false, range: 42 },
   { id: 'rail', name: 'R-01 磁轨', label: 'R-01 <span>磁轨</span>', className: '磁轨精确步枪 // SEMI', damage: 135, fireRate: 0.8, magazine: 5, reserve: 25, reload: 2.1, spread: 0.001, pellets: 1, auto: false, range: 130, pierce: true },
+  { id: 'arc', name: 'ARC-7 弧光', label: 'ARC-7 <span>弧光</span>', className: '链式电弧 // CHAIN', damage: 46, fireRate: 3.4, magazine: 24, reserve: 120, reload: 1.7, spread: 0.014, pellets: 1, auto: true, range: 62, chain: 3 },
 ];
 
 const ENEMY_DATA = {
   runner: { name: '猎犬突击体', health: 65, speed: 4.7, damage: 13, score: 120, radius: 0.55, color: 0xff4658 },
   drone: { name: '蜂群射手', health: 90, speed: 2.7, damage: 10, score: 180, radius: 0.65, color: 0xb367ff },
   tank: { name: '重装碾压者', health: 310, speed: 1.35, damage: 16, score: 420, radius: 0.95, color: 0xff8a3d },
+  phantom: { name: '相位幽影', health: 58, speed: 6.4, damage: 12, score: 240, radius: 0.5, color: 0x5ce1ff },
+  bomber: { name: '自毁蜂群', health: 46, speed: 5.5, damage: 28, score: 210, radius: 0.52, color: 0xffc24d },
   boss: { name: '守望者核心', health: 2600, speed: 1.45, damage: 18, score: 5000, radius: 2.1, color: 0xff593d },
 };
+
+const DIFFICULTY = {
+  recruit: { id: 'recruit', label: '新兵', hp: 0.78, damage: 0.68, score: 0.85, drop: 1.35, spawn: 0.85 },
+  standard: { id: 'standard', label: '标准', hp: 1, damage: 1, score: 1, drop: 1, spawn: 1 },
+  nightmare: { id: 'nightmare', label: '噩梦', hp: 1.4, damage: 1.45, score: 1.5, drop: 0.82, spawn: 1.18 },
+};
+
+export const ACHIEVEMENTS = [
+  { id: 'first-blood', name: '首次接触', desc: '击毁第一个敌对单位' },
+  { id: 'combo-master', name: '连锁反应', desc: '连击倍率达到 2.5' },
+  { id: 'flawless', name: '无损作战', desc: '无伤清除一整波敌人' },
+  { id: 'crit-10', name: '精准打击', desc: '单局造成 10 次暴击' },
+  { id: 'overdrive', name: '核心超载', desc: '首次释放超载模式' },
+  { id: 'defuser', name: '拆弹专家', desc: '在自毁蜂群引爆前将其击毁' },
+  { id: 'arc-chain', name: '雷霆万钧', desc: '弧光一次连锁 3 个以上目标' },
+  { id: 'victory', name: '黎明已至', desc: '完成核心行动' },
+  { id: 'nightmare', name: '噩梦终结', desc: '在噩梦难度下通关' },
+];
 
 const UPGRADES = [
   { id: 'damage', icon: '↟', type: 'FIREPOWER', name: '超载弹药', description: '所有武器伤害提高 22%。让每一次命中都更具威胁。', apply: (g) => { g.player.damageMultiplier *= 1.22; } },
@@ -25,9 +46,16 @@ const UPGRADES = [
   { id: 'health', icon: '✚', type: 'SURVIVAL', name: '纳米修复', description: '最大生命值提高 30，并立即恢复全部生命。', apply: (g) => { g.player.maxHealth += 30; g.player.health = g.player.maxHealth; } },
   { id: 'shield', icon: '◇', type: 'SURVIVAL', name: '电容护盾', description: '最大护盾提高 25，护盾恢复速度提高 30%。', apply: (g) => { g.player.maxShield += 25; g.player.shield = g.player.maxShield; g.player.shieldRegen *= 1.3; } },
   { id: 'speed', icon: '⌁', type: 'MOBILITY', name: '动力肌腱', description: '移动速度提高 12%，相位冲刺冷却缩短 20%。', apply: (g) => { g.player.speedMultiplier *= 1.12; g.player.dashMax *= 0.8; } },
-  { id: 'pulse', icon: '◎', type: 'ABILITY', name: '脉冲增幅', description: '电磁脉冲范围扩大 25%，伤害提高 35%。', apply: (g) => { g.player.pulseRadius *= 1.25; g.player.pulseDamage *= 1.35; } },
+  { id: 'pulse', icon: '◎', type: 'ABILITY', name: '脉冲增幅', description: '电磁脉冲范围扩大 25%，伤害提高 35%，冷却缩短 15%。', apply: (g) => { g.player.pulseRadius *= 1.25; g.player.pulseDamage *= 1.35; g.player.pulseMax *= 0.85; } },
   { id: 'ammo', icon: '▤', type: 'UTILITY', name: '战场回收', description: '立刻补满备用弹药，后续弹药拾取量提高 50%。', apply: (g) => { g.weaponState.forEach((w, i) => { w.reserve = WEAPONS[i].reserve; }); g.player.ammoMultiplier *= 1.5; } },
   { id: 'leech', icon: '⟁', type: 'SURVIVAL', name: '猎手协议', description: '每次击毁敌人恢复 4 点生命与 3 点护盾。', apply: (g) => { g.player.killHeal += 4; } },
+  { id: 'crit', icon: '✦', type: 'FIREPOWER', name: '弱点解析', description: '暴击率提高 12%，暴击伤害提高 30%。', apply: (g) => { g.player.critChance += 0.12; g.player.critMultiplier += 0.3; } },
+  { id: 'execute', icon: '⌖', type: 'FIREPOWER', name: '终结协议', description: '对生命值低于 35% 的敌人额外造成 50% 伤害。', apply: (g) => { g.player.executeBonus += 0.5; } },
+  { id: 'overcharge', icon: 'ϟ', type: 'ABILITY', name: '核心共振', description: '超载能量获取提高 40%，超载持续时间延长 2.5 秒。', apply: (g) => { g.player.energyGain *= 1.4; g.player.overdriveMax += 2.5; } },
+  { id: 'chain', icon: '≈', type: 'UTILITY', name: '电弧分流', description: '弧光额外跳跃 1 个目标，连锁伤害提高 25%。', apply: (g) => { g.player.chainBonus += 1; g.player.chainDamage *= 1.25; } },
+  { id: 'magnet', icon: '⊙', type: 'UTILITY', name: '磁场牵引', description: '拾取范围扩大 1 倍，补给效果提高 35%。', apply: (g) => { g.player.pickupRadius *= 2; g.player.pickupPower *= 1.35; } },
+  { id: 'dashwave', icon: '↝', type: 'MOBILITY', name: '冲击冲刺', description: '冲刺结束时释放冲击波，对周围敌人造成 55 点伤害。', apply: (g) => { g.player.dashWave += 55; } },
+  { id: 'regen', icon: '♻', type: 'SURVIVAL', name: '自适应回路', description: '护盾恢复延迟缩短 2 秒，恢复速度提高 45%。', apply: (g) => { g.player.shieldDelay = Math.max(1.5, g.player.shieldDelay - 2); g.player.shieldRegen *= 1.45; } },
 ];
 
 export class Game {
@@ -81,6 +109,13 @@ export class Game {
     this.weaponRecoil = 0;
     this.muzzleTimer = 0;
     this.currentUpgradeChoices = [];
+    this.difficulty = DIFFICULTY.standard;
+    this.appliedUpgrades = [];
+    this.runAchievements = new Set();
+    this.critCount = 0;
+    this.comboPeak = 1;
+    this.waveDamageTaken = 0;
+    this.dashActive = false;
     this.sharedParticleGeometry = new THREE.BoxGeometry(0.055, 0.055, 0.055);
     this.sharedProjectileGeometry = new THREE.SphereGeometry(0.11, 8, 8);
     this.createWorld();
@@ -273,7 +308,7 @@ export class Game {
     const group = new THREE.Group();
     const metal = new THREE.MeshStandardMaterial({ color: index === 2 ? 0x354b5c : 0x3b4b47, emissive: index === 2 ? 0x101c26 : 0x101c19, emissiveIntensity: 0.45, metalness: 0.82, roughness: 0.3 });
     const dark = new THREE.MeshStandardMaterial({ color: 0x11191b, emissive: 0x050808, emissiveIntensity: 0.3, metalness: 0.75, roughness: 0.4 });
-    const glow = new THREE.MeshBasicMaterial({ color: index === 1 ? 0xffa34d : index === 2 ? 0x69bfff : 0x54f7d2, toneMapped: false });
+    const glow = new THREE.MeshBasicMaterial({ color: index === 1 ? 0xffa34d : index === 2 ? 0x69bfff : index === 3 ? 0x7de8ff : 0x54f7d2, toneMapped: false });
     const addBox = (w, h, d, x, y, z, material = metal) => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
       mesh.position.set(x, y, z);
@@ -292,26 +327,41 @@ export class Game {
       addBox(0.16, 0.1, 0.25, 0, -0.12, -0.5, metal);
       addBox(0.13, 0.3, 0.15, 0, -0.2, 0.05, dark).rotation.x = -0.22;
       addBox(0.245, 0.035, 0.28, 0, 0.02, -0.25, glow);
-    } else {
+    } else if (index === 2) {
       addBox(0.17, 0.19, 0.86, 0, 0, -0.22);
       addBox(0.065, 0.065, 0.7, 0, 0.02, -0.94, dark);
       addBox(0.035, 0.07, 0.82, 0.095, 0.02, -0.42, glow);
       addBox(0.035, 0.07, 0.82, -0.095, 0.02, -0.42, glow);
       addBox(0.08, 0.12, 0.3, 0, 0.15, -0.2, dark);
       addBox(0.13, 0.28, 0.16, 0, -0.2, 0.04, dark).rotation.x = -0.18;
+    } else {
+      addBox(0.2, 0.2, 0.68, 0, 0, -0.14);
+      addBox(0.12, 0.12, 0.42, 0, 0.015, -0.62, dark);
+      addBox(0.09, 0.09, 0.26, 0, 0.025, -0.9, glow);
+      [-1, 1].forEach((side) => {
+        addBox(0.045, 0.16, 0.52, side * 0.13, 0.05, -0.3, glow);
+        addBox(0.07, 0.1, 0.3, side * 0.16, -0.14, 0.02, dark);
+      });
+      addBox(0.14, 0.28, 0.16, 0, -0.2, 0.06, dark).rotation.x = -0.18;
+      const coil = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.025, 6, 16), glow);
+      coil.position.set(0, 0.02, -0.78);
+      group.add(coil);
     }
     group.traverse((child) => { child.frustumCulled = false; child.renderOrder = 10; });
     this.weaponRoot.add(group);
     this.weaponModel = group;
-    this.muzzleLight.position.set(0, 0.02, index === 2 ? -1.25 : -0.95);
+    this.muzzleLight.position.set(0, 0.02, index === 2 ? -1.25 : index === 3 ? -1.05 : -0.95);
   }
 
   resetPlayer() {
     this.player = {
       position: new THREE.Vector3(0, 1.7, 22), velocity: new THREE.Vector3(), health: 100, maxHealth: 100, shield: 50, maxShield: 50,
       damageMultiplier: 1, fireRateMultiplier: 1, reloadMultiplier: 1, speedMultiplier: 1, ammoMultiplier: 1,
-      dashCooldown: 0, dashMax: 5, dashTime: 0, invulnerable: 0, pulseCooldown: 0, pulseRadius: 12, pulseDamage: 75,
-      shieldRegen: 8, lastDamage: 0, killHeal: 0,
+      dashCooldown: 0, dashMax: 5, dashTime: 0, invulnerable: 0, pulseCooldown: 0, pulseMax: 12, pulseRadius: 12, pulseDamage: 75,
+      shieldRegen: 8, shieldDelay: 5, lastDamage: 0, killHeal: 0,
+      critChance: 0.08, critMultiplier: 1.75, executeBonus: 1, executeThreshold: 0.35,
+      energy: 0, energyMax: 100, energyGain: 1, overdrive: 0, overdriveMax: 8,
+      chainBonus: 0, chainDamage: 1, pickupRadius: 1.45, pickupPower: 1, dashWave: 0,
     };
     this.weaponState = WEAPONS.map((weapon) => ({ ammo: weapon.magazine, reserve: weapon.reserve }));
     this.weaponIndex = 0;
@@ -333,6 +383,12 @@ export class Game {
     this.intermission = false;
     this.yaw = 0;
     this.pitch = 0;
+    this.appliedUpgrades = [];
+    this.runAchievements = new Set();
+    this.critCount = 0;
+    this.comboPeak = 1;
+    this.waveDamageTaken = 0;
+    this.dashActive = false;
   }
 
   clearDynamicObjects() {
@@ -350,12 +406,13 @@ export class Game {
     this.spawnQueue = [];
   }
 
-  start(mode = 'campaign') {
+  start(mode = 'campaign', difficultyId = 'standard') {
     this.audio.init();
     this.runId = (this.runId || 0) + 1;
     this.clearDynamicObjects();
     this.resetPlayer();
     this.mode = mode;
+    this.difficulty = DIFFICULTY[difficultyId] || DIFFICULTY.standard;
     this.firing = false;
     this.aiming = false;
     this.touchMove = { x: 0, y: 0 };
@@ -365,7 +422,7 @@ export class Game {
     this.camera.position.copy(this.player.position);
     this.camera.rotation.set(0, 0, 0);
     this.callbacks.onState('playing');
-    this.callbacks.onAnnounce(mode === 'training' ? '模拟训练' : '神经链接建立', mode === 'training' ? '敌方伤害已关闭 · 熟悉你的武器' : '准备迎击第一波敌对单位', 'TACTICAL LINK / CONNECTED', 2400);
+    this.callbacks.onAnnounce(mode === 'training' ? '模拟训练' : '神经链接建立', mode === 'training' ? `敌方伤害已关闭 · 熟悉你的武器 · ${this.difficulty.label}难度` : `准备迎击第一波敌对单位 · ${this.difficulty.label}难度`, 'TACTICAL LINK / CONNECTED', 2400);
     this.nextWaveTimer = 2.2;
     this.intermission = true;
     this.requestLock();
@@ -385,6 +442,14 @@ export class Game {
     this.state = 'paused';
     this.firing = false;
     document.exitPointerLock?.();
+    this.callbacks.onBuild?.({
+      difficulty: this.difficulty.label,
+      upgrades: this.appliedUpgrades,
+      damage: Math.round((this.player.damageMultiplier - 1) * 100),
+      crit: Math.round(this.player.critChance * 100),
+      kills: this.kills,
+      wave: this.wave,
+    });
     this.callbacks.onState('paused');
   }
 
@@ -412,9 +477,11 @@ export class Game {
       if (event.code === 'KeyR') this.reload();
       if (event.code === 'KeyQ') this.dash();
       if (event.code === 'KeyE') this.pulse();
+      if (event.code === 'KeyF') this.activateOverdrive();
       if (event.code === 'Digit1') this.switchWeapon(0);
       if (event.code === 'Digit2') this.switchWeapon(1);
       if (event.code === 'Digit3') this.switchWeapon(2);
+      if (event.code === 'Digit4') this.switchWeapon(3);
       if (event.code === 'KeyP' || (event.code === 'Escape' && !document.pointerLockElement)) {
         if (this.state === 'playing') this.pause();
         else if (this.state === 'paused') this.resume();
@@ -441,8 +508,9 @@ export class Game {
       if (this.state !== 'playing') return;
       const direction = event.deltaY > 0 ? 1 : -1;
       let next = this.weaponIndex;
-      for (let i = 0; i < 3; i++) {
-        next = (next + direction + 3) % 3;
+      const total = WEAPONS.length;
+      for (let i = 0; i < total; i++) {
+        next = (next + direction + total) % total;
         if (next <= this.unlockedWeapon) break;
       }
       this.switchWeapon(next);
@@ -495,11 +563,16 @@ export class Game {
     const stopFire = (event) => { event.preventDefault(); this.firing = false; this.shotThisHold = false; };
     fire.addEventListener('touchend', stopFire);
     fire.addEventListener('touchcancel', stopFire);
-    const bindButton = (id, action) => document.getElementById(id).addEventListener('touchstart', (event) => { event.preventDefault(); action(); }, { passive: false });
+    const bindButton = (id, action) => {
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.addEventListener('touchstart', (event) => { event.preventDefault(); action(); }, { passive: false });
+    };
     bindButton('mobile-reload', () => this.reload());
     bindButton('mobile-dash', () => this.dash());
     bindButton('mobile-pulse', () => this.pulse());
     bindButton('mobile-switch', () => this.switchWeapon((this.weaponIndex + 1) % (this.unlockedWeapon + 1)));
+    bindButton('mobile-overdrive', () => this.activateOverdrive());
   }
 
   resize() {
@@ -514,27 +587,31 @@ export class Game {
     this.wave += 1;
     this.intermission = false;
     this.waveClearPending = false;
+    this.waveDamageTaken = 0;
     this.spawnQueue = [];
+    const diff = this.difficulty;
     const campaignBoss = this.mode === 'campaign' && this.wave === 10;
     const endlessBoss = this.mode === 'endless' && this.wave % 5 === 0;
     if (campaignBoss || endlessBoss) {
       this.spawnQueue.push('boss');
-      const minions = Math.min(8, 2 + Math.floor(this.wave / 2));
-      for (let i = 0; i < minions; i++) this.spawnQueue.push(i % 3 === 0 ? 'drone' : 'runner');
-      this.callbacks.onAnnounce('守望者降临', '摧毁核心装甲 · 注意范围攻击', 'WARNING / APEX SIGNAL', 3200);
+      const minions = Math.min(10, Math.ceil((2 + Math.floor(this.wave / 2)) * diff.spawn));
+      const escort = ['runner', 'drone', 'phantom', 'bomber', 'tank'];
+      for (let i = 0; i < minions; i++) this.spawnQueue.push(escort[Math.floor(Math.random() * escort.length)]);
+      this.callbacks.onAnnounce('守望者降临', '摧毁核心装甲 · 注意范围攻击与自毁单位', 'WARNING / APEX SIGNAL', 3200);
     } else {
-      const count = this.mode === 'training' ? Math.min(10, 4 + this.wave) : Math.min(30, 4 + this.wave * 2);
-      for (let i = 0; i < count; i++) {
-        const roll = Math.random();
-        let type = 'runner';
-        if (this.wave >= 2 && roll > 0.52) type = 'drone';
-        if (this.wave >= 4 && roll > 0.84) type = 'tank';
-        this.spawnQueue.push(type);
-      }
+      const base = this.mode === 'training' ? Math.min(10, 4 + this.wave) : Math.min(30, 4 + this.wave * 2);
+      const count = Math.max(3, Math.round(base * diff.spawn));
+      const pool = ['runner'];
+      if (this.wave >= 2) pool.push('drone', 'drone');
+      if (this.wave >= 3) pool.push('phantom');
+      if (this.wave >= 4) pool.push('tank');
+      if (this.wave >= 5) pool.push('bomber');
+      for (let i = 0; i < count; i++) this.spawnQueue.push(pool[Math.floor(Math.random() * pool.length)]);
       this.callbacks.onAnnounce(`第 ${String(this.wave).padStart(2, '0')} 波`, this.wave === 1 ? '敌对信号接近 · 清除所有单位' : '威胁等级上升 · 保持移动', 'HOSTILE SIGNALS DETECTED');
     }
-    if (this.wave >= 4 && this.unlockedWeapon < 2) this.unlockWeapon(2);
-    else if (this.wave >= 2 && this.unlockedWeapon < 1) this.unlockWeapon(1);
+    if (this.wave >= 6 && this.unlockedWeapon === 2) this.unlockWeapon(3);
+    else if (this.wave >= 4 && this.unlockedWeapon === 1) this.unlockWeapon(2);
+    else if (this.wave >= 2 && this.unlockedWeapon === 0) this.unlockWeapon(1);
     this.spawnTimer = 0.4;
     this.audio.wave();
   }
@@ -554,14 +631,16 @@ export class Game {
     point.z += random(-2.5, 2.5);
     const group = new THREE.Group();
     group.position.copy(point);
-    const material = new THREE.MeshStandardMaterial({ color: type === 'boss' ? 0x291713 : 0x171c20, emissive: data.color, emissiveIntensity: 0.45, metalness: 0.8, roughness: 0.3 });
+    const material = new THREE.MeshStandardMaterial({ color: type === 'boss' ? 0x291713 : 0x171c20, emissive: data.color, emissiveIntensity: 0.45, metalness: 0.8, roughness: 0.3, transparent: type === 'phantom', opacity: 1 });
     const glow = new THREE.MeshBasicMaterial({ color: data.color, toneMapped: false });
     const dark = new THREE.MeshStandardMaterial({ color: 0x090b0d, metalness: 0.9, roughness: 0.25 });
+    const diff = this.difficulty;
     const enemy = {
-      type, group, material, health: data.health * (1 + Math.max(0, this.wave - 1) * (type === 'boss' ? 0.12 : 0.085)), maxHealth: 0,
-      speed: data.speed * (1 + Math.min(0.45, this.wave * 0.018)), damage: data.damage * (1 + this.wave * 0.025), score: data.score,
+      type, group, material, health: data.health * (1 + Math.max(0, this.wave - 1) * (type === 'boss' ? 0.12 : 0.085)) * diff.hp, maxHealth: 0,
+      speed: data.speed * (1 + Math.min(0.45, this.wave * 0.018)), damage: data.damage * (1 + this.wave * 0.025) * diff.damage, score: Math.round(data.score * diff.score),
       radius: data.radius, name: data.name, attackCooldown: random(0.4, 1.3), spawnTime: 0.85, dead: false, deathTimer: 0,
       strafe: Math.random() > 0.5 ? 1 : -1, phase: Math.random() * Math.PI * 2, hitTimer: 0, healthBar: null, barFill: null,
+      phased: false, phaseTimer: random(1.4, 2.8), fuse: 0,
     };
     enemy.maxHealth = enemy.health;
     const addPart = (geometry, mat, x, y, z, critical = false) => {
@@ -602,7 +681,28 @@ export class Game {
         addPart(new THREE.BoxGeometry(0.5, 0.6, 0.65), dark, side * 0.45, 0.32, 0);
       });
       enemy.height = 2.8;
-    } else {
+    } else if (type === 'phantom') {
+      addPart(new THREE.OctahedronGeometry(0.5, 0), material, 0, 1.35, 0);
+      addPart(new THREE.OctahedronGeometry(0.22, 0), glow, 0, 1.35, -0.38, true);
+      [-1, 1].forEach((side) => {
+        const blade = addPart(new THREE.BoxGeometry(0.09, 1.05, 0.28), dark, side * 0.5, 1.25, 0);
+        blade.rotation.z = side * 0.35;
+      });
+      addPart(new THREE.ConeGeometry(0.2, 0.9, 5), material, 0, 0.5, 0).rotation.x = Math.PI;
+      enemy.height = 2.2;
+      enemy.baseY = 0.25;
+    } else if (type === 'bomber') {
+      addPart(new THREE.SphereGeometry(0.52, 12, 9), material, 0, 1.3, 0);
+      addPart(new THREE.IcosahedronGeometry(0.28, 0), glow, 0, 1.3, -0.4, true);
+      const belt = addPart(new THREE.TorusGeometry(0.62, 0.07, 6, 20), glow, 0, 1.3, 0);
+      belt.rotation.x = Math.PI / 2;
+      [-1, 1].forEach((side) => {
+        addPart(new THREE.BoxGeometry(0.36, 0.1, 0.22), dark, side * 0.62, 1.3, 0);
+        addPart(new THREE.ConeGeometry(0.13, 0.5, 5), material, side * 0.34, 0.55, 0).rotation.x = Math.PI;
+      });
+      enemy.height = 2.1;
+      enemy.baseY = 0.3;
+    } else if (type === 'boss') {
       addPart(new THREE.SphereGeometry(1.65, 20, 14), material, 0, 3.2, 0);
       addPart(new THREE.IcosahedronGeometry(0.85, 1), glow, 0, 3.2, -1.05, true);
       for (let i = 0; i < 3; i++) {
@@ -658,18 +758,42 @@ export class Game {
         continue;
       }
       enemy.group.scale.setScalar(1);
+      if (enemy.type === 'phantom') {
+        enemy.phaseTimer -= dt;
+        if (enemy.phaseTimer <= 0) {
+          enemy.phased = !enemy.phased;
+          enemy.phaseTimer = enemy.phased ? 1.05 : 2.5;
+          enemy.material.opacity = enemy.phased ? 0.2 : 1;
+          this.spawnParticles(enemy.group.position.clone().add(new THREE.Vector3(0, 1.2, 0)), 0x5ce1ff, this.isTouch ? 4 : 9, 2);
+        }
+      }
+      if (enemy.type === 'bomber' && enemy.fuse > 0) {
+        enemy.fuse -= dt;
+        enemy.material.emissiveIntensity = 1.4 + Math.sin(enemy.phase * 36) * 1.4;
+        if (Math.random() > 0.65) this.spawnParticles(enemy.group.position.clone().add(new THREE.Vector3(0, 1.1, 0)), 0xffc24d, 2, 1.4);
+        if (enemy.fuse <= 0) { this.detonateBomber(enemy); continue; }
+      }
       const toPlayer = playerFlat.clone().sub(new THREE.Vector3(enemy.group.position.x, 0, enemy.group.position.z));
       const distance = toPlayer.length();
       toPlayer.normalize();
       enemy.group.rotation.y = Math.atan2(toPlayer.x, toPlayer.z) + Math.PI;
       enemy.attackCooldown -= dt;
       let move = new THREE.Vector3();
-      if (enemy.type === 'runner') {
+      if (enemy.type === 'runner' || enemy.type === 'phantom') {
         if (distance > 1.45) move.copy(toPlayer);
         if (distance < 1.85 && enemy.attackCooldown <= 0) {
           this.damagePlayer(enemy.damage, enemy.group.position);
-          enemy.attackCooldown = 0.9;
+          enemy.attackCooldown = enemy.type === 'phantom' ? 0.75 : 0.9;
           enemy.group.position.addScaledVector(toPlayer, 0.3);
+        }
+      } else if (enemy.type === 'bomber') {
+        if (enemy.fuse <= 0) {
+          if (distance > 2.7) move.copy(toPlayer);
+          else {
+            enemy.fuse = 1.2;
+            this.audio.warning();
+            this.createPulseEffect(enemy.group.position.clone(), 0xffb347, 4.5);
+          }
         }
       } else {
         const desired = enemy.type === 'drone' ? 13 : enemy.type === 'tank' ? 17 : 20;
@@ -702,6 +826,61 @@ export class Game {
       enemy.healthBar.quaternion.copy(this.camera.quaternion);
     }
     this.enemies = this.enemies.filter((enemy) => !enemy.remove);
+  }
+
+  detonateBomber(enemy) {
+    const center = enemy.group.position.clone();
+    enemy.dead = true;
+    enemy.deathTimer = 0.02;
+    enemy.healthBar.visible = false;
+    this.enemyHitMeshes = this.enemyHitMeshes.filter((mesh) => mesh.userData.enemy !== enemy);
+    this.spawnParticles(center.clone().add(new THREE.Vector3(0, 1, 0)), 0xffb347, this.isTouch ? 14 : 28, 6);
+    this.createPulseEffect(center, 0xffa13d, 6);
+    this.audio.explosion();
+    this.shake = Math.min(1.3, this.shake + 0.45);
+    const distance = center.distanceTo(this.player.position);
+    if (distance < 5.5) this.damagePlayer(enemy.damage * (1 - distance / 5.5 * 0.55), center);
+  }
+
+  addEnergy(amount) {
+    const player = this.player;
+    if (player.overdrive > 0) return;
+    player.energy = Math.min(player.energyMax, player.energy + amount * player.energyGain);
+  }
+
+  activateOverdrive() {
+    const player = this.player;
+    if (this.state !== 'playing' || player.energy < player.energyMax || player.overdrive > 0) return;
+    player.energy = 0;
+    player.overdrive = player.overdriveMax;
+    player.pulseCooldown = Math.min(player.pulseCooldown, 2);
+    this.audio.overdrive();
+    this.createPulseEffect(player.position.clone(), 0xffd45c, 15);
+    this.callbacks.onAnnounce('核心超载', '射速与伤害大幅提升 · 弹药无限', 'OVERDRIVE / ENGAGED', 2200);
+    this.unlockAchievement('overdrive');
+  }
+
+  unlockAchievement(id) {
+    if (this.runAchievements.has(id)) return;
+    this.runAchievements.add(id);
+    const achievement = ACHIEVEMENTS.find((item) => item.id === id);
+    if (!achievement) return;
+    this.audio.achievement();
+    this.callbacks.onAchievement?.(achievement);
+  }
+
+  emitDashWave() {
+    const player = this.player;
+    if (player.dashWave <= 0) return;
+    const center = player.position.clone();
+    this.createPulseEffect(center, 0x54f7d2, 5.5);
+    this.audio.pulse();
+    for (const enemy of this.enemies) {
+      if (enemy.dead || enemy.phased) continue;
+      if (enemy.group.position.distanceTo(center) < 5.5) {
+        this.damageEnemy(enemy, player.dashWave * player.damageMultiplier, enemy.group.position.clone().sub(center).setY(0).normalize());
+      }
+    }
   }
 
   moveEnemy(enemy, movement) {
@@ -756,8 +935,9 @@ export class Game {
     player.dashCooldown = Math.max(0, player.dashCooldown - dt);
     player.pulseCooldown = Math.max(0, player.pulseCooldown - dt);
     player.invulnerable = Math.max(0, player.invulnerable - dt);
+    player.overdrive = Math.max(0, player.overdrive - dt);
     player.lastDamage += dt;
-    if (player.lastDamage > 5 && player.shield < player.maxShield) player.shield = Math.min(player.maxShield, player.shield + player.shieldRegen * dt);
+    if (player.lastDamage > player.shieldDelay && player.shield < player.maxShield) player.shield = Math.min(player.maxShield, player.shield + player.shieldRegen * dt);
     this.weaponCooldown = Math.max(0, this.weaponCooldown - dt);
     this.switchTimer = Math.max(0, this.switchTimer - dt);
     this.muzzleTimer = Math.max(0, this.muzzleTimer - dt);
@@ -773,13 +953,15 @@ export class Game {
     const move = forward.multiplyScalar(forwardInput).add(right.multiplyScalar(sideInput));
     if (move.lengthSq() > 1) move.normalize();
     const sprinting = (this.keys.ShiftLeft || this.keys.ShiftRight) && forwardInput > 0;
-    let speed = 6.6 * player.speedMultiplier * (sprinting ? 1.5 : 1) * (this.aiming ? 0.72 : 1);
+    let speed = 6.6 * player.speedMultiplier * (sprinting ? 1.5 : 1) * (this.aiming ? 0.72 : 1) * (player.overdrive > 0 ? 1.2 : 1);
     if (player.dashTime > 0) {
       player.dashTime -= dt;
       speed = 25;
       if (move.lengthSq() === 0) move.copy(new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)));
       if (Math.random() > 0.4) this.spawnParticles(player.position.clone().add(new THREE.Vector3(0, -0.7, 0)), 0x54f7d2, 1, 0.7);
     }
+    if (this.dashActive && player.dashTime <= 0) this.emitDashWave();
+    this.dashActive = player.dashTime > 0;
     const targetVelocity = move.multiplyScalar(speed);
     player.velocity.lerp(targetVelocity, 1 - Math.exp(-dt * (player.dashTime > 0 ? 25 : 12)));
     this.movePlayer(player.velocity.x * dt, player.velocity.z * dt);
@@ -825,18 +1007,20 @@ export class Game {
     if (this.state !== 'playing' || this.weaponCooldown > 0 || this.reloadTimer > 0 || this.switchTimer > 0 || this.player.dashTime > 0) return;
     const weapon = WEAPONS[this.weaponIndex];
     const state = this.weaponState[this.weaponIndex];
-    if (state.ammo <= 0) {
+    const player = this.player;
+    const overdrive = player.overdrive > 0;
+    if (state.ammo <= 0 && !overdrive) {
       this.audio.empty();
       this.weaponCooldown = 0.25;
       this.shotThisHold = true;
       this.reload();
       return;
     }
-    state.ammo -= 1;
+    if (!overdrive) state.ammo -= 1;
     this.shotsFired += 1;
     this.shotThisHold = true;
-    this.weaponCooldown = 1 / (weapon.fireRate * this.player.fireRateMultiplier);
-    this.weaponRecoil = Math.min(1.5, this.weaponRecoil + (weapon.id === 'shotgun' ? 1 : weapon.id === 'rail' ? 1.25 : 0.32));
+    this.weaponCooldown = 1 / (weapon.fireRate * player.fireRateMultiplier * (overdrive ? 1.6 : 1));
+    this.weaponRecoil = Math.min(1.5, this.weaponRecoil + (weapon.id === 'shotgun' ? 1 : weapon.id === 'rail' ? 1.25 : weapon.id === 'arc' ? 0.45 : 0.32));
     this.pitch = clamp(this.pitch + (weapon.id === 'shotgun' ? 0.025 : weapon.id === 'rail' ? 0.018 : 0.004), -1.45, 1.45);
     this.muzzleTimer = 0.055;
     this.audio.shot(weapon.id);
@@ -859,7 +1043,10 @@ export class Game {
       this.raycaster.far = weapon.range;
       const wallHits = this.raycaster.intersectObjects(this.worldColliders, false);
       const wallDistance = wallHits.length ? wallHits[0].distance : weapon.range;
-      const hits = this.raycaster.intersectObjects(this.enemyHitMeshes, false).filter((hit) => !hit.object.userData.enemy.dead && hit.distance < wallDistance);
+      const hits = this.raycaster.intersectObjects(this.enemyHitMeshes, false).filter((hit) => {
+        const target = hit.object.userData.enemy;
+        return target && !target.dead && !target.phased && hit.distance < wallDistance;
+      });
       let endpoint = origin.clone().addScaledVector(direction, wallDistance);
       if (wallHits.length) endpoint = wallHits[0].point;
       if (hits.length) {
@@ -870,7 +1057,10 @@ export class Game {
           if (uniqueEnemies.includes(enemy)) continue;
           uniqueEnemies.push(enemy);
           const critical = hit.object.userData.critical;
-          const killed = this.damageEnemy(enemy, weapon.damage * this.player.damageMultiplier * (critical ? 1.65 : 1), direction);
+          const critRoll = Math.random() < player.critChance;
+          const amount = weapon.damage * player.damageMultiplier * (overdrive ? 1.5 : 1) * (critical ? 1.65 : 1) * (critRoll ? player.critMultiplier : 1);
+          const killed = this.damageEnemy(enemy, amount, direction, { critical: Boolean(critical || critRoll), critRoll });
+          if (weapon.chain) this.chainLightning(enemy, hit.point, amount, weapon.chain + player.chainBonus, new Set(uniqueEnemies));
           anyKill = anyKill || killed;
           if (!weapon.pierce) {
             endpoint = hit.point;
@@ -881,20 +1071,60 @@ export class Game {
       } else if (wallHits.length) {
         this.spawnParticles(endpoint, 0x6ba698, 3, 1.3);
       }
-      if (pellet === 0 || weapon.id === 'shotgun') this.createTracer(origin, endpoint, weapon.id === 'rail' ? 0x72caff : weapon.id === 'shotgun' ? 0xffb464 : 0x71ffdb, weapon.id === 'rail' ? 0.22 : 0.07);
+      if (pellet === 0 || weapon.id === 'shotgun') this.createTracer(origin, endpoint, weapon.id === 'rail' ? 0x72caff : weapon.id === 'shotgun' ? 0xffb464 : weapon.id === 'arc' ? 0x7de8ff : 0x71ffdb, weapon.id === 'rail' ? 0.22 : 0.07);
     }
     if (anyHit) {
       this.shotsHit += 1;
+      this.addEnergy(1.4);
       this.audio.hit();
       this.callbacks.onHit(anyKill);
     }
+  }
+
+  chainLightning(sourceEnemy, hitPoint, baseDamage, jumps, visited) {
+    if (jumps <= 0) return 0;
+    let from = hitPoint.clone();
+    let chained = 0;
+    for (let jump = 0; jump < jumps; jump++) {
+      let best = null;
+      let bestDistance = 11;
+      for (const enemy of this.enemies) {
+        if (enemy.dead || enemy.phased || visited.has(enemy)) continue;
+        const distance = enemy.group.position.distanceTo(from);
+        if (distance < bestDistance) { bestDistance = distance; best = enemy; }
+      }
+      if (!best) break;
+      visited.add(best);
+      const target = best.group.position.clone().add(new THREE.Vector3(0, best.height * 0.5, 0));
+      this.createArc(from, target, 0x7de8ff);
+      this.damageEnemy(best, baseDamage * Math.pow(0.72, jump + 1) * this.player.chainDamage, target.clone().sub(from).normalize());
+      from = target;
+      chained += 1;
+    }
+    if (chained >= 3) this.unlockAchievement('arc-chain');
+    return chained;
+  }
+
+  createArc(start, end, color) {
+    const points = [];
+    const segments = 6;
+    for (let i = 0; i <= segments; i++) {
+      const point = start.clone().lerp(end, i / segments);
+      if (i > 0 && i < segments) point.add(new THREE.Vector3(random(-0.35, 0.35), random(-0.35, 0.35), random(-0.35, 0.35)));
+      points.push(point);
+    }
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+    const line = new THREE.Line(geometry, material);
+    this.scene.add(line);
+    this.tracers.push({ line, life: 0.18, maxLife: 0.18 });
   }
 
   getAimAssist(origin, direction) {
     let best = null;
     let bestAngle = 0.12;
     for (const enemy of this.enemies) {
-      if (enemy.dead || enemy.spawnTime > 0) continue;
+      if (enemy.dead || enemy.spawnTime > 0 || enemy.phased) continue;
       const target = enemy.group.position.clone().add(new THREE.Vector3(0, enemy.type === 'boss' ? 3 : 1.2, 0));
       const toTarget = target.sub(origin);
       const distance = toTarget.length();
@@ -906,19 +1136,40 @@ export class Game {
     return best;
   }
 
-  damageEnemy(enemy, amount, direction) {
+  damageEnemy(enemy, amount, direction, meta = {}) {
     if (enemy.dead) return false;
-    enemy.health -= amount;
+    let final = amount;
+    if (this.player.executeBonus > 1 && enemy.health / enemy.maxHealth < this.player.executeThreshold) final *= this.player.executeBonus;
+    if (meta.critRoll) {
+      this.critCount += 1;
+      if (this.critCount >= 10) this.unlockAchievement('crit-10');
+    }
+    enemy.health -= final;
     enemy.hitTimer = 0.07;
     enemy.healthBar.visible = true;
     const ratio = clamp(enemy.health / enemy.maxHealth, 0, 1);
     enemy.barFill.scale.x = ratio;
     enemy.barFill.position.x = -(1 - ratio) * (enemy.type === 'boss' ? 1.5 : 0.6);
+    this.showDamageNumber(enemy, final, Boolean(meta.critical), enemy.health <= 0);
     if (enemy.health <= 0) {
       this.killEnemy(enemy, direction);
       return true;
     }
     return false;
+  }
+
+  showDamageNumber(enemy, amount, critical, kill) {
+    const callback = this.callbacks.onDamageNumber;
+    if (!callback) return;
+    const point = enemy.group.position.clone().add(new THREE.Vector3(random(-0.3, 0.3), enemy.height * 0.6, 0));
+    point.project(this.camera);
+    if (point.z < -1 || point.z > 1) return;
+    callback({
+      amount: Math.round(amount),
+      x: (point.x * 0.5 + 0.5) * innerWidth,
+      y: (-point.y * 0.5 + 0.5) * innerHeight,
+      critical, kill,
+    });
   }
 
   killEnemy(enemy, direction = new THREE.Vector3()) {
@@ -930,6 +1181,11 @@ export class Game {
     this.kills += 1;
     this.combo = Math.min(4, this.combo + (enemy.type === 'boss' ? 1 : 0.2));
     this.comboTimer = 4;
+    this.comboPeak = Math.max(this.comboPeak, this.combo);
+    this.addEnergy(6);
+    this.unlockAchievement('first-blood');
+    if (this.combo >= 2.5) this.unlockAchievement('combo-master');
+    if (enemy.type === 'bomber') this.unlockAchievement('defuser');
     const gained = Math.floor(enemy.score * this.combo);
     this.score += gained;
     this.player.health = Math.min(this.player.maxHealth, this.player.health + this.player.killHeal);
@@ -943,7 +1199,7 @@ export class Game {
     } else this.audio.kill();
     this.callbacks.onKill(enemy.name, gained);
     const totalAmmo = this.weaponState.reduce((sum, weapon) => sum + weapon.ammo + weapon.reserve, 0);
-    const dropChance = this.mode === 'training' ? 0.35 : 0.24;
+    const dropChance = (this.mode === 'training' ? 0.35 : 0.24) * this.difficulty.drop;
     if (enemy.type !== 'boss' && (Math.random() < dropChance || totalAmmo < 25)) {
       const roll = Math.random();
       let type = this.player.health < this.player.maxHealth * 0.55 && roll < 0.5 ? 'health' : roll < 0.34 ? 'health' : roll < 0.67 ? 'shield' : 'ammo';
@@ -992,7 +1248,7 @@ export class Game {
 
   pulse() {
     if (this.state !== 'playing' || this.player.pulseCooldown > 0) return;
-    this.player.pulseCooldown = 12;
+    this.player.pulseCooldown = this.player.pulseMax * (this.player.overdrive > 0 ? 0.5 : 1);
     const center = this.player.position.clone();
     this.createPulseEffect(center, 0x54f7d2, this.player.pulseRadius);
     this.audio.pulse();
@@ -1082,13 +1338,14 @@ export class Game {
       pickup.phase += dt;
       pickup.group.rotation.y += dt * 1.8;
       pickup.group.position.y = 0.7 + Math.sin(pickup.phase * 2.5) * 0.12;
-      if (pickup.group.position.distanceTo(this.player.position) < 1.45) {
-        if (pickup.type === 'health') this.player.health = Math.min(this.player.maxHealth, this.player.health + 30);
-        if (pickup.type === 'shield') this.player.shield = Math.min(this.player.maxShield, this.player.shield + 25);
+      if (pickup.group.position.distanceTo(this.player.position) < this.player.pickupRadius) {
+        const power = this.player.pickupPower;
+        if (pickup.type === 'health') this.player.health = Math.min(this.player.maxHealth, this.player.health + 30 * power);
+        if (pickup.type === 'shield') this.player.shield = Math.min(this.player.maxShield, this.player.shield + 25 * power);
         if (pickup.type === 'ammo') {
-          this.weaponState.forEach((state, index) => { state.reserve += Math.ceil(WEAPONS[index].magazine * 1.5 * this.player.ammoMultiplier); });
+          this.weaponState.forEach((state, index) => { state.reserve += Math.ceil(WEAPONS[index].magazine * 1.5 * this.player.ammoMultiplier * power); });
         }
-        this.callbacks.onToast({ health: '纳米修复 +30 HP', shield: '护盾能量 +25 SH', ammo: '备用弹药已补充' }[pickup.type]);
+        this.callbacks.onToast({ health: `纳米修复 +${Math.round(30 * power)} HP`, shield: `护盾能量 +${Math.round(25 * power)} SH`, ammo: '备用弹药已补充' }[pickup.type]);
         this.audio.pickup();
         pickup.life = 0;
       }
@@ -1100,6 +1357,8 @@ export class Game {
   damagePlayer(amount, source) {
     if (this.state !== 'playing' || this.player.invulnerable > 0 || this.mode === 'training') return;
     this.player.lastDamage = 0;
+    this.waveDamageTaken += amount;
+    this.addEnergy(8);
     let remaining = amount;
     if (this.player.shield > 0) {
       const absorbed = Math.min(this.player.shield, remaining);
@@ -1132,6 +1391,7 @@ export class Game {
     const alive = this.enemies.some((enemy) => !enemy.dead);
     if (!this.spawnQueue.length && !alive && !this.waveClearPending) {
       this.waveClearPending = true;
+      if (this.wave > 0 && this.waveDamageTaken === 0) this.unlockAchievement('flawless');
       const runId = this.runId;
       if (this.mode === 'campaign' && this.wave >= 10) {
         setTimeout(() => { if (this.runId === runId && this.state === 'playing') this.end(true); }, 1200);
@@ -1159,6 +1419,7 @@ export class Game {
     if (this.state !== 'upgrade' || !this.currentUpgradeChoices[index]) return;
     const upgrade = this.currentUpgradeChoices[index];
     upgrade.apply(this);
+    this.appliedUpgrades.push({ name: upgrade.name, icon: upgrade.icon });
     this.audio.upgrade();
     this.state = 'playing';
     this.waveClearPending = false;
@@ -1179,8 +1440,25 @@ export class Game {
     const newRecord = this.score > previousBest;
     if (newRecord) localStorage.setItem('nexus-best-score', String(Math.floor(this.score)));
     if (this.wave > previousWave) localStorage.setItem('nexus-best-wave', String(this.wave));
+    if (victory) {
+      this.unlockAchievement('victory');
+      if (this.difficulty.id === 'nightmare') this.unlockAchievement('nightmare');
+    }
+    const career = this.saveCareer(victory);
     if (victory) this.audio.victory(); else this.audio.gameOver();
-    this.callbacks.onState('ended', { victory, score: this.score, wave: this.wave, kills: this.kills, accuracy: this.shotsFired ? this.shotsHit / this.shotsFired * 100 : 0, newRecord });
+    this.callbacks.onState('ended', { victory, score: this.score, wave: this.wave, kills: this.kills, accuracy: this.shotsFired ? this.shotsHit / this.shotsFired * 100 : 0, newRecord, career, difficulty: this.difficulty.label, achievements: [...this.runAchievements] });
+  }
+
+  saveCareer(victory) {
+    let career = { runs: 0, kills: 0, wins: 0, bestCombo: 1, achievements: [] };
+    try { career = { ...career, ...JSON.parse(localStorage.getItem('nexus-career') || '{}') }; } catch (_) { /* Ignore corrupted storage. */ }
+    career.runs += 1;
+    career.kills += this.kills;
+    if (victory) career.wins += 1;
+    career.bestCombo = Math.max(Number(career.bestCombo) || 1, this.comboPeak);
+    career.achievements = [...new Set([...(career.achievements || []), ...this.runAchievements])];
+    try { localStorage.setItem('nexus-career', JSON.stringify(career)); } catch (_) { /* Storage may be unavailable. */ }
+    return career;
   }
 
   updateHUD(force = false) {
@@ -1193,7 +1471,10 @@ export class Game {
       score: this.score, combo: this.combo, weapon: WEAPONS[this.weaponIndex], weaponIndex: this.weaponIndex,
       ammo: this.weaponState[this.weaponIndex].ammo, reserve: this.weaponState[this.weaponIndex].reserve,
       reloading: this.reloadTimer > 0, unlockedWeapon: this.unlockedWeapon, dashCooldown: this.player.dashCooldown,
+      dashMax: this.player.dashMax, pulseMax: this.player.pulseMax * (this.player.overdrive > 0 ? 0.5 : 1),
       pulseCooldown: this.player.pulseCooldown, boss: boss ? { health: boss.health, maxHealth: boss.maxHealth } : null,
+      energy: this.player.energy, energyMax: this.player.energyMax, overdrive: this.player.overdrive,
+      difficulty: this.difficulty.label, critChance: this.player.critChance,
       intermission: this.intermission, elapsed: this.elapsed,
     });
   }
@@ -1225,7 +1506,7 @@ export class Game {
       context.arc(center + x * scale, center + z * scale, radius, 0, Math.PI * 2);
       context.fill();
     };
-    this.enemies.forEach((enemy) => { if (!enemy.dead) plot(enemy.group.position, enemy.type === 'boss' ? '#ff9a55' : '#ff5362', enemy.type === 'boss' ? 4 : 2.2); });
+    this.enemies.forEach((enemy) => { if (!enemy.dead && !enemy.phased) plot(enemy.group.position, enemy.type === 'boss' ? '#ff9a55' : enemy.type === 'bomber' ? '#ffc24d' : enemy.type === 'phantom' ? '#5ce1ff' : '#ff5362', enemy.type === 'boss' ? 4 : 2.2); });
     this.pickups.forEach((pickup) => plot(pickup.group.position, '#54f7d2', 1.5));
     context.restore();
     context.fillStyle = '#a9fff0';

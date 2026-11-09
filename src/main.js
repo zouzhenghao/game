@@ -1,5 +1,5 @@
 import './style.css';
-import { Game } from './game/Game.js';
+import { Game, ACHIEVEMENTS } from './game/Game.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -7,27 +7,43 @@ const pad = (number, size = 2) => String(Math.max(0, Math.floor(number))).padSta
 const formatScore = (number) => Math.floor(number).toLocaleString('en-US').replaceAll(',', ',');
 
 let selectedMode = 'campaign';
+let selectedDifficulty = 'standard';
 let lastMode = 'campaign';
 let game;
 let announceTimer;
 let toastTimer;
+let achievementTimer;
+let lastDamageNumber = 0;
 
 const modalTemplates = {
   briefing: `
     <div class="eyebrow">OPERATION / NEON ASHES</div><h2 id="modal-title">作战简报<span>.</span></h2>
     <p class="modal-lead">02:17，第七区战术网络遭到不明机械军团入侵。你是最后一名仍可链接的「幽灵」作战员。</p>
-    <div class="briefing-grid"><div><b>01</b><strong>突破包围</strong><p>清理每一波敌对单位，利用掩体与冲刺避免被集火。</p></div><div><b>02</b><strong>适应战场</strong><p>每波结束后选择强化模块。击毁敌人可能掉落生命、护盾与弹药。</p></div><div><b>03</b><strong>摧毁核心</strong><p>在核心行动第 10 波击败守望者。无尽裂隙则会持续提高威胁。</p></div></div>
-    <div class="intel-row"><span>情报：红色敌人擅长突袭</span><span>紫色敌人远程攻击</span><span>橙色重装单位移动缓慢</span></div>`,
+    <div class="briefing-grid"><div><b>01</b><strong>突破包围</strong><p>清理每一波敌对单位，利用掩体与冲刺避免被集火。</p></div><div><b>02</b><strong>适应战场</strong><p>每波结束从 15 种战术模块中三选一，逐步构筑专属打法。</p></div><div><b>03</b><strong>摧毁核心</strong><p>命中与击毁积攒能量，按 F 释放超载；第 10 波击败守望者。</p></div></div>
+    <div class="intel-row v2"><span>红色敌人擅长突袭</span><span>紫色敌人远程攻击</span><span>橙色重装移动缓慢</span><span>青色幽影会相位隐形</span><span>黄色蜂群贴近后自毁</span></div>`,
   armory: `
-    <div class="eyebrow">TACTICAL LOADOUT / NX SERIES</div><h2 id="modal-title">武器库<span>.</span></h2><p class="modal-lead">所有武器均在行动中自动解锁。按 1 / 2 / 3 或滚轮快速切换。</p>
-    <div class="armory-list"><article><div class="weapon-silhouette rifle">VX-9</div><div><small>01 / 初始装备</small><h3>VX-9 脉冲</h3><p>稳定的全自动脉冲步枪，适合中距离持续压制。</p><span>伤害 24　·　射速 9/s　·　弹匣 30</span></div></article><article><div class="weapon-silhouette shotgun">SG-12</div><div><small>02 / 第 2 波解锁</small><h3>SG-12 裂解</h3><p>八枚高能弹丸同时释放，近距离可造成毁灭性伤害。</p><span>伤害 14×8　·　射速 1.2/s　·　弹匣 6</span></div></article><article><div class="weapon-silhouette rail">R-01</div><div><small>03 / 第 4 波解锁</small><h3>R-01 磁轨</h3><p>高精度磁轨射线，贯穿一条直线上的所有敌人。</p><span>伤害 135　·　射速 0.8/s　·　弹匣 5</span></div></article></div>`,
+    <div class="eyebrow">TACTICAL LOADOUT / NX SERIES</div><h2 id="modal-title">武器库<span>.</span></h2><p class="modal-lead">四把武器均在行动中按波次自动解锁。按 1 / 2 / 3 / 4 或滚轮快速切换。</p>
+    <div class="armory-list"><article><div class="weapon-silhouette rifle">VX-9</div><div><small>01 / 初始装备</small><h3>VX-9 脉冲</h3><p>稳定的全自动脉冲步枪，适合中距离持续压制。</p><span>伤害 24　·　射速 9/s　·　弹匣 30</span></div></article><article><div class="weapon-silhouette shotgun">SG-12</div><div><small>02 / 第 2 波解锁</small><h3>SG-12 裂解</h3><p>八枚高能弹丸同时释放，近距离可造成毁灭性伤害。</p><span>伤害 14×8　·　射速 1.2/s　·　弹匣 6</span></div></article><article><div class="weapon-silhouette rail">R-01</div><div><small>03 / 第 4 波解锁</small><h3>R-01 磁轨</h3><p>高精度磁轨射线，贯穿一条直线上的所有敌人。</p><span>伤害 135　·　射速 0.8/s　·　弹匣 5</span></div></article><article class="v2"><div class="weapon-silhouette rail">ARC-7</div><div><small>04 / 第 6 波解锁</small><h3>ARC-7 弧光</h3><p>发射链式电弧，命中后自动跳跃到附近敌人，最多连锁 3 个目标。</p><span>伤害 46　·　射速 3.4/s　·　弹匣 24</span></div></article></div>`,
   controls: `
     <div class="eyebrow">NEURAL INTERFACE / MANUAL</div><h2 id="modal-title">操作指南<span>.</span></h2>
-    <div class="controls-grid"><div><h3>键鼠操作</h3><p><kbd>W A S D</kbd><span>移动</span></p><p><kbd>鼠标</kbd><span>观察 / 瞄准</span></p><p><kbd>左键 / 右键</kbd><span>射击 / 精确瞄准</span></p><p><kbd>Shift</kbd><span>疾跑</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>R / 1 2 3</kbd><span>装填 / 切换武器</span></p><p><kbd>ESC / P</kbd><span>暂停</span></p></div><div><h3>触屏操作</h3><p><kbd>左侧摇杆</kbd><span>移动</span></p><p><kbd>右侧滑动</kbd><span>观察 / 瞄准</span></p><p><kbd>FIRE</kbd><span>按住连续射击</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>R / ⇄</kbd><span>装填 / 切换武器</span></p><p><kbd>Ⅱ</kbd><span>暂停</span></p><small>手机端会自动辅助瞄准近距离目标。</small></div></div>`
+    <div class="controls-grid"><div><h3>键鼠操作</h3><p><kbd>W A S D</kbd><span>移动</span></p><p><kbd>鼠标</kbd><span>观察 / 瞄准</span></p><p><kbd>左键 / 右键</kbd><span>射击 / 精确瞄准</span></p><p><kbd>Shift</kbd><span>疾跑</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载（能量满时）</span></p><p><kbd>R / 1 2 3 4</kbd><span>装填 / 切换四把武器</span></p><p><kbd>ESC / P</kbd><span>暂停</span></p></div><div><h3>触屏操作</h3><p><kbd>左侧摇杆</kbd><span>移动</span></p><p><kbd>右侧滑动</kbd><span>观察 / 瞄准</span></p><p><kbd>FIRE</kbd><span>按住连续射击</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载</span></p><p><kbd>R / ⇄</kbd><span>装填 / 切换武器</span></p><p><kbd>Ⅱ</kbd><span>暂停</span></p><small>手机端会自动辅助瞄准近距离目标。</small></div></div>
+    <p class="modal-lead" style="margin-top:16px">首页「威胁校准」可选择新兵 / 标准 / 噩梦三档难度，影响敌人强度、掉落率与积分倍率。</p>`
 };
 
+function careerTemplate() {
+  let career = { runs: 0, kills: 0, wins: 0, bestCombo: 1, achievements: [] };
+  try { career = { ...career, ...JSON.parse(localStorage.getItem('nexus-career') || '{}') }; } catch (_) { /* Ignore corrupted storage. */ }
+  const unlocked = new Set(career.achievements || []);
+  return `
+    <div class="eyebrow">OPERATIVE RECORD / ARCHIVE</div><h2 id="modal-title">生涯档案<span>.</span></h2>
+    <p class="modal-lead">战绩仅保存在本机浏览器，不会上传。挑战噩梦难度，解锁全部战术徽章。</p>
+    <div class="career-grid"><div><small>出击次数</small><strong>${career.runs}</strong></div><div><small>累计击毁</small><strong>${career.kills}</strong></div><div><small>通关次数</small><strong>${career.wins}</strong></div><div><small>最高连击</small><strong>×${Number(career.bestCombo || 1).toFixed(1)}</strong></div></div>
+    <div class="eyebrow">战术徽章 · ${unlocked.size} / ${ACHIEVEMENTS.length}</div>
+    <div class="achievement-list">${ACHIEVEMENTS.map((item) => `<div class="achievement-item ${unlocked.has(item.id) ? 'unlocked' : ''}"><i>${unlocked.has(item.id) ? '◆' : '◇'}</i><div><strong>${item.name}</strong><small>${item.desc}</small></div></div>`).join('')}</div>`;
+}
+
 function showModal(type) {
-  $('#modal-content').innerHTML = modalTemplates[type];
+  $('#modal-content').innerHTML = type === 'career' ? careerTemplate() : modalTemplates[type];
   $('#modal-backdrop').classList.add('active');
 }
 function closeModal() { $('#modal-backdrop').classList.remove('active'); }
@@ -39,6 +55,13 @@ $$('.mode-card').forEach((button) => button.addEventListener('click', () => {
   $$('.mode-card').forEach((item) => item.classList.remove('selected'));
   button.classList.add('selected');
   selectedMode = button.dataset.mode;
+  game?.audio.ui();
+}));
+
+$$('.difficulty-chip').forEach((button) => button.addEventListener('click', () => {
+  $$('.difficulty-chip').forEach((item) => item.classList.remove('selected'));
+  button.classList.add('selected');
+  selectedDifficulty = button.dataset.difficulty;
   game?.audio.ui();
 }));
 
@@ -63,6 +86,7 @@ function updateHUD(data) {
   $('#wave-value').textContent = pad(data.wave);
   $('#wave-total').textContent = data.mode === 'campaign' ? '/ 10' : '/ ∞';
   $('#mode-label').textContent = { campaign: '核心行动', endless: '无尽裂隙', training: '模拟训练' }[data.mode];
+  $('#difficulty-label').textContent = data.difficulty;
   $('#enemy-count').textContent = data.intermission ? '区域暂时安全' : `${data.enemies} 个敌对信号`;
   $('#score-value').textContent = pad(data.score, 6);
   $('#combo-value').textContent = `× ${data.combo.toFixed(1)}`;
@@ -77,8 +101,15 @@ function updateHUD(data) {
     slot.classList.toggle('active', index === data.weaponIndex);
     slot.classList.toggle('locked', index > data.unlockedWeapon);
   });
-  updateAbility('#ability-dash', data.dashCooldown, 5);
-  updateAbility('#ability-pulse', data.pulseCooldown, 12);
+  updateAbility('#ability-dash', data.dashCooldown, data.dashMax);
+  updateAbility('#ability-pulse', data.pulseCooldown, data.pulseMax);
+  const energyPct = data.overdrive > 0 ? 100 : data.energy / data.energyMax * 100;
+  $('#energy-fill').style.width = `${Math.max(0, Math.min(100, energyPct))}%`;
+  const ready = data.energy >= data.energyMax && data.overdrive <= 0;
+  $('#energy-block').classList.toggle('ready', ready);
+  $('#energy-block').classList.toggle('active', data.overdrive > 0);
+  $('#overdrive-status').textContent = data.overdrive > 0 ? `超载 ${data.overdrive.toFixed(1)}s` : ready ? '就绪 · 按 F 释放' : `充能 ${Math.floor(energyPct)}%`;
+  $('#mobile-overdrive')?.classList.toggle('ready', ready);
   $('#boss-hud').classList.toggle('active', Boolean(data.boss));
   if (data.boss) $('#boss-fill').style.width = `${Math.max(0, data.boss.health / data.boss.maxHealth * 100)}%`;
   $('#objective').classList.toggle('hidden', data.wave > 1 || data.elapsed > 12);
@@ -89,7 +120,7 @@ function updateAbility(selector, cooldown, max) {
   const ready = cooldown <= 0;
   element.classList.toggle('cooldown', !ready);
   element.querySelector('.ability-status').textContent = ready ? '就绪' : `${cooldown.toFixed(1)}s`;
-  element.querySelector('.ability span i').style.width = `${100 - Math.min(100, cooldown / max * 100)}%`;
+  element.querySelector('.ability span i').style.width = `${100 - Math.min(100, cooldown / Math.max(0.1, max) * 100)}%`;
 }
 
 function announce(title, subtitle = '', eyebrow = 'COMBAT UPDATE', duration = 2200) {
@@ -107,6 +138,41 @@ function toast(message, duration = 1800) {
   $('#interact-toast').textContent = message;
   $('#interact-toast').classList.add('active');
   toastTimer = setTimeout(() => $('#interact-toast').classList.remove('active'), duration);
+}
+
+function showAchievement(achievement) {
+  const element = $('#achievement-toast');
+  element.querySelector('strong').textContent = achievement.name;
+  element.querySelector('p').textContent = achievement.desc;
+  element.classList.remove('active');
+  void element.offsetWidth;
+  element.classList.add('active');
+  clearTimeout(achievementTimer);
+  achievementTimer = setTimeout(() => element.classList.remove('active'), 3000);
+}
+
+function showDamageNumber({ amount, x, y, critical, kill }) {
+  const container = $('#damage-numbers');
+  const now = performance.now();
+  if (container.children.length > 18 || now - lastDamageNumber < 18) return;
+  lastDamageNumber = now;
+  const element = document.createElement('div');
+  element.className = `damage-number${kill ? ' kill' : critical ? ' critical' : ''}`;
+  element.textContent = amount;
+  element.style.left = `${x}px`;
+  element.style.top = `${y}px`;
+  container.appendChild(element);
+  setTimeout(() => element.remove(), 820);
+}
+
+function showBuild(data) {
+  const modules = data.upgrades.length
+    ? data.upgrades.map((item) => `<span>${item.icon} ${item.name}</span>`).join('')
+    : '<span class="pause-build-empty">尚未安装战术模块</span>';
+  $('#pause-build').innerHTML = `
+    <div class="pause-build-head"><span>当前作战配置</span><span>${data.difficulty}难度</span></div>
+    <div class="pause-build-stats"><span>伤害 +${data.damage}%</span><span>暴击 ${data.crit}%</span><span>击毁 ${data.kills}</span><span>波次 ${pad(data.wave)}</span></div>
+    <div class="pause-build-modules">${modules}</div>`;
 }
 
 function addKillFeed(name, score) {
@@ -141,6 +207,9 @@ function showEnd(data) {
   $('#end-kills').textContent = data.kills;
   $('#end-accuracy').textContent = `${Math.round(data.accuracy)}%`;
   $('#new-record').classList.toggle('active', data.newRecord);
+  $('#end-career').textContent = data.career
+    ? `生涯累计 // 出击 ${data.career.runs} 次 · 击毁 ${data.career.kills} · 通关 ${data.career.wins} · 徽章 ${data.career.achievements.length}/${ACHIEVEMENTS.length} · ${data.difficulty}难度`
+    : '';
   updateRecords();
 }
 
@@ -166,7 +235,7 @@ function damage(direction) {
 function start(mode) {
   lastMode = mode;
   closeModal();
-  game.start(mode);
+  game.start(mode, selectedDifficulty);
 }
 
 game = new Game($('#game-canvas'), $('#radar'), {
@@ -178,6 +247,9 @@ game = new Game($('#game-canvas'), $('#radar'), {
   onHit: hit,
   onUpgrades: showUpgrades,
   onDamage: damage,
+  onBuild: showBuild,
+  onAchievement: showAchievement,
+  onDamageNumber: showDamageNumber,
 });
 window.nexusGame = game;
 

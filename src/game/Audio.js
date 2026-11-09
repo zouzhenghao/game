@@ -75,6 +75,10 @@ export class AudioSystem {
       this.tone(1250, 0.28, 0.18, 'sawtooth', 85);
       this.tone(90, 0.35, 0.22, 'sine', 35);
       this.noise(0.16, 0.2, 3000);
+    } else if (type === 'arc') {
+      this.tone(920, 0.12, 0.13, 'square', 230);
+      this.tone(1560, 0.09, 0.08, 'sine', 440);
+      this.noise(0.09, 0.12, 4200);
     } else {
       this.noise(0.075, 0.18, 1900);
       this.tone(190, 0.07, 0.12, 'square', 70);
@@ -96,4 +100,7 @@ export class AudioSystem {
   upgrade() { [380, 570, 760].forEach((f, i) => this.tone(f, 0.25, 0.08, 'triangle', f * 1.1, i * 0.08)); }
   gameOver() { this.tone(210, 0.8, 0.15, 'sawtooth', 45); }
   victory() { [262, 330, 392, 523].forEach((f, i) => this.tone(f, 0.5, 0.09, 'triangle', f, i * 0.13)); }
+  overdrive() { [330, 440, 660, 880].forEach((f, i) => this.tone(f, 0.45, 0.1, 'sawtooth', f * 1.35, i * 0.06)); this.tone(70, 0.6, 0.18, 'sine', 40); }
+  achievement() { [660, 880, 1320].forEach((f, i) => this.tone(f, 0.15, 0.07, 'triangle', f, i * 0.07)); }
+  warning() { this.tone(780, 0.12, 0.09, 'square', 520); this.tone(780, 0.12, 0.09, 'square', 520, 0.2); }
 }
