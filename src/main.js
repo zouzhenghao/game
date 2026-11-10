@@ -1,10 +1,17 @@
 import './style.css';
-import { Game, ACHIEVEMENTS } from './game/Game.js';
+import './board.css';
+import { Game, ACHIEVEMENTS, detectProfile } from './game/Game.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const pad = (number, size = 2) => String(Math.max(0, Math.floor(number))).padStart(size, '0');
 const formatScore = (number) => Math.floor(number).toLocaleString('en-US').replaceAll(',', ',');
+
+// 设备档位必须在 Game 实例化之前确定：渲染分辨率、阴影与输入方式都依赖它。
+const deviceProfile = detectProfile();
+document.documentElement.dataset.device = deviceProfile;
+const deviceNames = { desktop: 'DEVICE / DESKTOP', mobile: 'DEVICE / MOBILE', board: 'DEVICE / SEEWO BOARD' };
+$('#device-badge').textContent = deviceNames[deviceProfile];
 
 let selectedMode = 'campaign';
 let selectedDifficulty = 'standard';
@@ -27,7 +34,8 @@ const modalTemplates = {
   controls: `
     <div class="eyebrow">NEURAL INTERFACE / MANUAL</div><h2 id="modal-title">操作指南<span>.</span></h2>
     <div class="controls-grid"><div><h3>键鼠操作</h3><p><kbd>W A S D</kbd><span>移动</span></p><p><kbd>鼠标</kbd><span>观察 / 瞄准</span></p><p><kbd>左键 / 右键</kbd><span>射击 / 精确瞄准</span></p><p><kbd>Shift</kbd><span>疾跑</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载（能量满时）</span></p><p><kbd>R / 1 2 3 4</kbd><span>装填 / 切换四把武器</span></p><p><kbd>ESC / P</kbd><span>暂停</span></p></div><div><h3>触屏操作</h3><p><kbd>左侧摇杆</kbd><span>移动</span></p><p><kbd>右侧滑动</kbd><span>观察 / 瞄准</span></p><p><kbd>FIRE</kbd><span>按住连续射击</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载</span></p><p><kbd>R / ⇄</kbd><span>装填 / 切换武器</span></p><p><kbd>Ⅱ</kbd><span>暂停</span></p><small>手机端会自动辅助瞄准近距离目标。</small></div></div>
-    <p class="modal-lead" style="margin-top:16px">首页「威胁校准」可选择新兵 / 标准 / 噩梦三档难度，影响敌人强度、掉落率与积分倍率。</p>`
+    <p class="modal-lead" style="margin-top:16px">首页「威胁校准」可选择新兵 / 标准 / 噩梦三档难度，影响敌人强度、掉落率与积分倍率。</p>
+    <div class="board-note"><h3>希沃白板 / 教学一体机</h3><p>首页「设备适配」选择「白板大屏」：全部按钮放大到适合手指点击，支持红外多点触控（一人移动、一人开火），弹药打空自动装填，无需键盘鼠标。点 <kbd>AUTO</kbd> 开启课堂演示，自动锁定最近目标并持续开火，适合投屏讲解；<kbd>◎</kbd> 为精确瞄准。</p></div>`
 };
 
 function careerTemplate() {
@@ -64,6 +72,25 @@ $$('.difficulty-chip').forEach((button) => button.addEventListener('click', () =
   selectedDifficulty = button.dataset.difficulty;
   game?.audio.ui();
 }));
+
+// 切换设备档位后重载，让渲染器与输入层按新档位重新初始化。
+let savedDevice = null;
+try { savedDevice = localStorage.getItem('nexus-device'); } catch (_) { /* Storage may be unavailable. */ }
+const urlDevice = new URLSearchParams(location.search).get('device');
+const forcedDevice = ['desktop', 'mobile', 'board'].includes(urlDevice) ? urlDevice : null;
+const activeDevice = forcedDevice || (['desktop', 'mobile', 'board'].includes(savedDevice) ? savedDevice : 'auto');
+$$('.device-chip').forEach((button) => {
+  button.classList.toggle('selected', button.dataset.device === activeDevice);
+  button.addEventListener('click', () => {
+    const value = button.dataset.device;
+    try {
+      if (value === 'auto') localStorage.removeItem('nexus-device');
+      else localStorage.setItem('nexus-device', value);
+    } catch (_) { /* Storage may be unavailable. */ }
+    game?.audio.ui();
+    setTimeout(() => location.reload(), 140);
+  });
+});
 
 function setState(state, data = {}) {
   $('#menu-screen').classList.toggle('active', state === 'menu');
@@ -113,6 +140,10 @@ function updateHUD(data) {
   $('#boss-hud').classList.toggle('active', Boolean(data.boss));
   if (data.boss) $('#boss-fill').style.width = `${Math.max(0, data.boss.health / data.boss.maxHealth * 100)}%`;
   $('#objective').classList.toggle('hidden', data.wave > 1 || data.elapsed > 12);
+  if (data.board) {
+    $('#board-badge').classList.toggle('demo', Boolean(data.demo));
+    $('#board-demo-state').textContent = data.demo ? '自动演示中' : '手动操作';
+  }
 }
 
 function updateAbility(selector, cooldown, max) {
@@ -236,6 +267,8 @@ function start(mode) {
   lastMode = mode;
   closeModal();
   game.start(mode, selectedDifficulty);
+  $('#mobile-demo')?.classList.toggle('active', game.demoMode);
+  $('#mobile-aim')?.classList.toggle('active', game.aiming);
 }
 
 game = new Game($('#game-canvas'), $('#radar'), {
@@ -250,6 +283,10 @@ game = new Game($('#game-canvas'), $('#radar'), {
   onBuild: showBuild,
   onAchievement: showAchievement,
   onDamageNumber: showDamageNumber,
+  onDemo: (active) => {
+    $('#board-badge').classList.toggle('demo', active);
+    $('#board-demo-state').textContent = active ? '自动演示中' : '手动操作';
+  },
 });
 window.nexusGame = game;
 

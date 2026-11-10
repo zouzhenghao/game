@@ -1,0 +1,203 @@
+/* ==================================================================
+   NEXUS STRIKE V3.0 — 设备适配层
+   重点：希沃白板等 65/86 寸 16:9 红外触控一体机（1920×1080 / 3840×2160）
+   目标：所有交互 ≥64px、无键盘可完成全流程、4K 下渲染降档由 JS 处理
+   ================================================================== */
+
+/* ---------- 首页设备选择器（三端通用） ---------- */
+.device-selector{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:12px 0 14px}
+.device-label{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;color:#6e8d85;margin-right:6px;white-space:nowrap}
+.device-chip{display:flex;align-items:baseline;gap:6px;padding:7px 11px;background:#07130fb8;border:1px solid #3b5a5266;color:#8faaa4;font-family:'Noto Sans SC',sans-serif;font-size:10px;letter-spacing:1px;cursor:pointer;transition:.2s;white-space:nowrap}
+.device-chip small{font-size:8px;color:#57726c;letter-spacing:0}
+.device-chip:hover{border-color:#54f7d288;color:#c9f5e9}
+.device-chip.selected{border-color:var(--cyan);color:var(--cyan);background:#54f7d218;box-shadow:0 0 18px #54f7d21c}
+.device-chip.selected small{color:#54f7d2aa}
+.board-badge{display:none}
+.board-note{margin-top:16px;padding:14px 16px;background:#54f7d20d;border-left:2px solid #54f7d277}
+.board-note h3{font-size:13px;color:var(--cyan);margin:0 0 8px;letter-spacing:2px}
+.board-note p{font-size:11px;line-height:1.9;color:#9fbdb5;margin:0}
+.board-note kbd{font-family:'Share Tech Mono',monospace;color:#ffd45c;border:1px solid #ffd45c55;padding:1px 5px;margin:0 2px}
+html[data-device="board"] .board-note h3{font-size:17px}
+html[data-device="board"] .board-note p{font-size:14px}
+
+@media(max-width:1100px){.device-chip small{display:none}}
+@media(max-width:760px){.device-selector{gap:4px;margin:8px 0 10px}.device-label{display:none}.device-chip{padding:6px 8px;font-size:9px}}
+
+/* 手动指定的档位覆盖系统自动判断 */
+html[data-device="mobile"] .mobile-controls,
+html[data-device="board"] .mobile-controls{display:block}
+html[data-device="mobile"] .hud-bottom-left,
+html[data-device="board"] .hud-bottom-left{display:none}
+html[data-device="desktop"] .mobile-controls{display:none!important}
+/* 手动指定触屏档位且处于横屏时，补齐系统 media query 不会命中的定位 */
+@media(orientation:landscape){
+html[data-device="mobile"] .weapon-hud{bottom:12px}
+html[data-device="mobile"] .weapon-slots{display:none}
+html[data-device="mobile"] .hud-pause{display:block}
+html[data-device="mobile"] .touch-stick{position:absolute;left:28px;bottom:35px;width:112px;height:112px;border:1px solid #9ac6bc33;background:#07130f44;border-radius:50%;pointer-events:auto}
+html[data-device="mobile"] .look-zone{position:absolute;right:0;top:15%;width:55%;height:60%;pointer-events:auto}
+html[data-device="mobile"] .mobile-fire{position:absolute;right:27px;bottom:115px;width:77px;height:77px;border:1px solid #54f7d277;background:#54f7d214;border-radius:50%;display:grid;place-items:center}
+html[data-device="mobile"] .mobile-small{position:absolute;width:39px;height:39px;background:#07130f88;border:1px solid #87aaa144;border-radius:50%;font-family:'Share Tech Mono',monospace;font-size:12px;color:#b7d0c9;pointer-events:auto}
+html[data-device="mobile"] .mobile-small.reload{right:118px;bottom:91px}
+html[data-device="mobile"] .mobile-small.dash{left:150px;bottom:43px}
+html[data-device="mobile"] .mobile-small.pulse{left:150px;bottom:94px}
+html[data-device="mobile"] .mobile-small.switch{right:117px;bottom:143px}
+html[data-device="mobile"] .mobile-small.overdrive{right:27px;bottom:207px}
+html[data-device="mobile"] .energy-block{left:14px;bottom:150px;width:150px}
+}
+
+/* ---------- 白板专属按钮默认隐藏 ---------- */
+.board-only{display:none!important}
+html[data-device="board"] .board-only{display:grid!important}
+
+/* ==================================================================
+   希沃白板 / 大屏横屏触控
+   ================================================================== */
+html[data-device="board"]{
+  --board-btn:clamp(74px,6.4vh,100px);
+  --board-gap:calc(var(--board-btn) + 14px);
+}
+
+/* —— 首页：远距离可读 —— */
+html[data-device="board"] h1{font-size:clamp(96px,9vw,168px)}
+html[data-device="board"] .hero-desc{font-size:clamp(12px,1.05vw,18px);line-height:1.9}
+html[data-device="board"] .english-title{font-size:clamp(19px,1.6vw,28px)}
+html[data-device="board"] .eyebrow{font-size:clamp(10px,.8vw,14px)}
+html[data-device="board"] .mode-card{padding:14px 16px;min-height:74px}
+html[data-device="board"] .mode-card strong{font-size:16px}
+html[data-device="board"] .mode-card small{font-size:11px}
+html[data-device="board"] .difficulty-chip{padding:10px 16px;font-size:13px}
+html[data-device="board"] .difficulty-chip small{font-size:9px}
+html[data-device="board"] .device-chip{padding:10px 14px;font-size:12px}
+html[data-device="board"] .device-chip small{font-size:9px}
+html[data-device="board"] .primary-button,
+html[data-device="board"] .secondary-button{height:clamp(56px,5.4vh,78px);font-size:clamp(15px,1.15vw,20px);min-width:220px}
+html[data-device="board"] .quick-controls{font-size:11px;gap:18px}
+html[data-device="board"] .quick-controls kbd{font-size:11px;padding:3px 7px}
+html[data-device="board"] .nav-links button{font-size:13px}
+html[data-device="board"] .mission-panel{width:clamp(300px,25vw,430px);min-width:clamp(300px,25vw,430px)}
+
+/* —— HUD 放大 —— */
+html[data-device="board"] .hud-top-left{left:3vw;top:2.6vh;width:clamp(280px,20vw,400px)}
+html[data-device="board"] .operative-tag>span{font-size:26px;padding:8px 12px}
+html[data-device="board"] .operative-tag small{font-size:10px}
+html[data-device="board"] .operative-tag strong{font-size:15px}
+html[data-device="board"] .vital-row{height:28px;gap:10px;font-size:13px}
+html[data-device="board"] .vital-row>span{font-size:13px;width:24px}
+html[data-device="board"] .vital-row>b{font-size:15px;min-width:44px}
+html[data-device="board"] .vital-bar{height:12px}
+html[data-device="board"] .wave-info{top:2.6vh}
+html[data-device="board"] .wave-info>div{font-size:clamp(22px,1.8vw,32px)}
+html[data-device="board"] .wave-info>div strong{font-size:clamp(34px,2.9vw,52px)}
+html[data-device="board"] .wave-info p{font-size:13px}
+html[data-device="board"] .hud-top-right{right:3vw;top:2.6vh;gap:18px}
+html[data-device="board"] .score-box small{font-size:11px}
+html[data-device="board"] .score-box strong{font-size:clamp(28px,2.2vw,40px)}
+html[data-device="board"] #radar{width:clamp(150px,12vw,220px);height:clamp(150px,12vw,220px)}
+html[data-device="board"] .hud-pause{right:3vw;top:calc(2.6vh + clamp(150px,12vw,220px) + 18px);width:64px;height:64px;font-size:24px;border-color:#54f7d266;color:var(--cyan)}
+html[data-device="board"] .hud-bottom-left{display:none}
+html[data-device="board"] .crosshair{transform:translate(-50%,-50%) scale(1.3)}
+html[data-device="board"] .announcer strong{font-size:clamp(42px,4vw,72px)}
+html[data-device="board"] .announcer p{font-size:clamp(15px,1.3vw,22px)}
+html[data-device="board"] .kill-feed{font-size:13px;top:22vh}
+html[data-device="board"] .objective{font-size:14px;padding:14px 18px}
+html[data-device="board"] .interact-toast{font-size:16px;padding:12px 22px;bottom:20vh}
+html[data-device="board"] .achievement-toast{top:16%;padding:16px 24px}
+html[data-device="board"] .achievement-toast strong{font-size:22px}
+html[data-device="board"] .damage-number{font-size:22px}
+html[data-device="board"] .damage-number.critical{font-size:30px}
+html[data-device="board"] .boss-hud{width:clamp(440px,42vw,760px)}
+html[data-device="board"] .boss-hud span{font-size:14px}
+
+/* —— 白板状态徽标 —— */
+html[data-device="board"] .board-badge{
+  display:flex;align-items:center;gap:12px;position:absolute;left:3vw;top:15vh;
+  padding:9px 16px;background:#07130fcc;border:1px solid #54f7d255;
+  font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;color:#8fbfb4;
+  pointer-events:none;z-index:4;
+}
+html[data-device="board"] .board-badge b{color:var(--cyan);font-weight:400}
+html[data-device="board"] .board-badge.demo b{color:#ffd45c}
+
+/* —— 武器与能量 —— */
+html[data-device="board"] .weapon-hud{right:3vw;bottom:3vh;min-width:clamp(300px,22vw,420px)}
+html[data-device="board"] .weapon-slots{display:flex;gap:8px}
+html[data-device="board"] .weapon-slots span{width:34px;height:28px;font-size:13px}
+html[data-device="board"] .weapon-hud>small{font-size:11px}
+html[data-device="board"] .weapon-hud h2{font-size:clamp(30px,2.3vw,42px)}
+html[data-device="board"] .ammo strong{font-size:clamp(40px,3.2vw,58px)}
+html[data-device="board"] .ammo span{font-size:18px}
+html[data-device="board"] .reload-hint{font-size:13px}
+html[data-device="board"] .energy-block{left:3vw;bottom:27vh;width:clamp(280px,22vw,400px);pointer-events:none}
+html[data-device="board"] .energy-head{font-size:13px;margin-bottom:9px}
+html[data-device="board"] .energy-head kbd{font-size:13px;padding:3px 8px}
+html[data-device="board"] .energy-head b{font-size:13px}
+html[data-device="board"] .energy-bar{height:13px}
+
+/* —— 触控区：大摇杆 / 大开火键 / 底部技能排 —— */
+html[data-device="board"] .look-zone{right:0;top:11%;width:62%;height:76%;pointer-events:auto}
+html[data-device="board"] .touch-stick{
+  left:3vw;bottom:4vh;
+  width:clamp(180px,16vh,250px);height:clamp(180px,16vh,250px);
+  border:2px solid #54f7d255;background:#07130f66;pointer-events:auto;
+}
+html[data-device="board"] .touch-stick>i{
+  width:clamp(64px,5.6vh,90px);height:clamp(64px,5.6vh,90px);
+  left:calc(50% - clamp(32px,2.8vh,45px));top:calc(50% - clamp(32px,2.8vh,45px));
+  border:2px solid #54f7d288;background:#54f7d233;
+}
+html[data-device="board"] .touch-stick>span{font-size:12px;bottom:-25px;letter-spacing:3px}
+html[data-device="board"] .mobile-fire{
+  right:4vw;bottom:22vh;
+  width:clamp(140px,13vh,200px);height:clamp(140px,13vh,200px);
+  border:2px solid #54f7d299;background:#54f7d21c;
+}
+html[data-device="board"] .mobile-fire i{width:62%;height:62%;border:2px solid #54f7d288}
+html[data-device="board"] .mobile-fire span{font-size:16px;letter-spacing:3px}
+html[data-device="board"] .mobile-fire:active{background:#54f7d24d}
+
+/* 包裹层默认不生成盒子，保留原有 absolute 定位；白板模式改为横向 flex 技能排 */
+.board-action-row{display:contents}
+
+html[data-device="board"] .board-action-row{
+  display:flex;position:absolute;left:50%;bottom:4vh;transform:translateX(-50%);
+  gap:14px;align-items:center;pointer-events:none;z-index:5;
+}
+html[data-device="board"] .board-action-row .mobile-small{
+  position:static;bottom:auto;left:auto;right:auto;
+  width:var(--board-btn);height:var(--board-btn);
+  border:2px solid #87aaa166;background:#07130fcc;
+  font-family:'Share Tech Mono',monospace;font-size:clamp(16px,1.3vw,22px);
+  color:#c9e6dd;display:grid;place-items:center;pointer-events:auto;
+}
+html[data-device="board"] .board-action-row .mobile-small:active{background:#54f7d23d;border-color:var(--cyan)}
+html[data-device="board"] .board-action-row .mobile-small.ready{border-color:#ffd45c;color:#ffd45c;box-shadow:0 0 20px #ffd45c33}
+html[data-device="board"] .board-action-row .mobile-small.active{background:#54f7d230;border-color:var(--cyan);color:var(--cyan)}
+html[data-device="board"] .board-action-row .mobile-small.demo{font-size:13px;letter-spacing:1px;width:calc(var(--board-btn) + 18px);border-radius:14px}
+
+/* —— 弹窗 / 暂停 / 升级 / 结算：远距离可点 —— */
+html[data-device="board"] .overlay-card,
+html[data-device="board"] .info-modal{transform:scale(1.16);transform-origin:center center}
+html[data-device="board"] .overlay-card .primary-button,
+html[data-device="board"] .overlay-card .secondary-button,
+html[data-device="board"] .overlay-card .text-button{min-height:66px;font-size:18px}
+html[data-device="board"] .upgrade-options{gap:22px;max-width:1400px}
+html[data-device="board"] .upgrade-card{min-height:270px;padding:28px;font-size:15px}
+html[data-device="board"] .upgrade-card h3{font-size:26px}
+html[data-device="board"] .upgrade-card p{font-size:15px}
+html[data-device="board"] .upgrade-card>b{font-size:15px}
+html[data-device="board"] .modal-close{width:56px;height:56px;font-size:30px}
+html[data-device="board"] .controls-grid p{font-size:15px}
+html[data-device="board"] .armory-list article{padding:18px}
+html[data-device="board"] .end-stats strong{font-size:36px}
+
+/* 4K 白板：进一步放大可读元素，但保持按钮不越界 */
+@media(min-width:2400px){
+  html[data-device="board"] .board-badge{font-size:16px;padding:12px 20px;top:13vh}
+  html[data-device="board"] .wave-info>div{font-size:44px}
+  html[data-device="board"] .wave-info>div strong{font-size:66px}
+  html[data-device="board"] .score-box strong{font-size:52px}
+  html[data-device="board"] .weapon-hud h2{font-size:50px}
+  html[data-device="board"] .ammo strong{font-size:66px}
+  html[data-device="board"] .upgrade-card{min-height:320px}
+}

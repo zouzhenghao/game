@@ -1,10 +1,32 @@
 import * as THREE from 'three';
 import { AudioSystem } from './Audio.js';
+import { createWeaponModel, buildEnemyModel } from './Models.js';
+import { buildWorld } from './World.js';
 
 const clamp = THREE.MathUtils.clamp;
 const lerp = THREE.MathUtils.lerp;
 const random = (min, max) => min + Math.random() * (max - min);
-const isTouchDevice = () => matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+
+/**
+ * 设备档位：
+ * - desktop：键鼠（含普通笔记本）
+ * - mobile：手机 / 小尺寸触屏（多为竖屏）
+ * - board：希沃白板等大屏横屏触控一体机（16:9、红外多点触控、常无键盘）
+ * 支持 ?device=board 与首页手动切换，结果写入 localStorage。
+ */
+export function detectProfile() {
+  let saved = null;
+  try { saved = localStorage.getItem('nexus-device'); } catch (_) { /* Storage may be unavailable. */ }
+  const forced = new URLSearchParams(location.search).get('device');
+  if (['desktop', 'mobile', 'board'].includes(forced)) return forced;
+  if (['desktop', 'mobile', 'board'].includes(saved)) return saved;
+  const coarse = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+  const longSide = Math.max(innerWidth, innerHeight);
+  const landscape = innerWidth > innerHeight;
+  if (coarse && landscape && (longSide >= 1000 || navigator.maxTouchPoints >= 5)) return 'board';
+  if (coarse) return 'mobile';
+  return 'desktop';
+}
 
 const WEAPONS = [
   { id: 'rifle', name: 'VX-9 脉冲', label: 'VX-9 <span>脉冲</span>', className: '突击步枪 // AUTO', damage: 24, fireRate: 9, magazine: 30, reserve: 180, reload: 1.45, spread: 0.009, pellets: 1, auto: true, range: 90 },
@@ -65,7 +87,12 @@ export class Game {
     this.radarContext = radar.getContext('2d');
     this.callbacks = callbacks;
     this.audio = new AudioSystem();
-    this.isTouch = isTouchDevice();
+    this.profile = detectProfile();
+    this.isBoard = this.profile === 'board';
+    this.isTouch = this.profile !== 'desktop';
+    this.lowPower = this.isBoard;
+    this.maxParticles = this.isBoard ? 16 : this.isTouch ? 25 : 80;
+    this.demoMode = false;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x03080b);
     this.scene.fog = new THREE.Fog(0x071115, 24, 112);
@@ -73,11 +100,11 @@ export class Game {
     this.camera.rotation.order = 'YXZ';
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setSize(innerWidth, innerHeight);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.isTouch ? 1.25 : 1.65));
+    this.applyQuality();
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.35;
-    this.renderer.shadowMap.enabled = !this.isTouch;
+    this.renderer.toneMappingExposure = 1.55;
+    this.renderer.shadowMap.enabled = !this.isTouch && !this.lowPower;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.clock = new THREE.Clock();
     this.raycaster = new THREE.Raycaster();
@@ -127,166 +154,13 @@ export class Game {
   }
 
   createWorld() {
-    const world = new THREE.Group();
-    this.scene.add(world);
-    this.world = world;
-    const hemi = new THREE.HemisphereLight(0x70a5ae, 0x020303, 1.75);
-    this.scene.add(hemi);
-    const moon = new THREE.DirectionalLight(0x9cdedb, 2.35);
-    moon.position.set(-25, 40, 18);
-    moon.castShadow = !this.isTouch;
-    moon.shadow.mapSize.set(1024, 1024);
-    moon.shadow.camera.left = -55;
-    moon.shadow.camera.right = 55;
-    moon.shadow.camera.top = 55;
-    moon.shadow.camera.bottom = -55;
-    this.scene.add(moon);
-    const coreLight = new THREE.PointLight(0x24ffd0, 35, 40, 2);
-    coreLight.position.set(0, 5, 0);
-    this.scene.add(coreLight);
-    const magenta = new THREE.PointLight(0xc145ff, 25, 36, 2);
-    magenta.position.set(-30, 5, -25);
-    this.scene.add(magenta);
+    buildWorld(this);
+  }
 
-    const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x111d21, roughness: 0.65, metalness: 0.62 });
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(150, 150), floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    world.add(floor);
-    this.worldColliders.push(floor);
-    const grid = new THREE.GridHelper(150, 75, 0x2b9b89, 0x17312f);
-    grid.material.transparent = true;
-    grid.material.opacity = 0.23;
-    grid.position.y = 0.012;
-    world.add(grid);
-
-    const darkMetal = new THREE.MeshStandardMaterial({ color: 0x111b1f, roughness: 0.48, metalness: 0.8 });
-    const blackMetal = new THREE.MeshStandardMaterial({ color: 0x070c0f, roughness: 0.4, metalness: 0.9 });
-    const cyanGlow = new THREE.MeshBasicMaterial({ color: 0x44e9c5, toneMapped: false });
-    const dimGlow = new THREE.MeshBasicMaterial({ color: 0x1b6d63, toneMapped: false });
-    const purpleGlow = new THREE.MeshBasicMaterial({ color: 0x963dce, toneMapped: false });
-
-    // Central containment reactor.
-    const reactor = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 5.2, 0.65, 12), darkMetal);
-    base.position.y = 0.32;
-    base.receiveShadow = true;
-    reactor.add(base);
-    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.9, 5.5, 12), new THREE.MeshStandardMaterial({ color: 0x102e2a, emissive: 0x19d5ad, emissiveIntensity: 1.15, metalness: 0.7, roughness: 0.2 }));
-    core.position.y = 3.1;
-    reactor.add(core);
-    for (let i = 0; i < 3; i++) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2 + i * 0.45, 0.055, 8, 64), i === 1 ? purpleGlow : cyanGlow);
-      ring.position.y = 2.1 + i * 0.85;
-      ring.rotation.x = Math.PI / 2 + (i - 1) * 0.25;
-      reactor.add(ring);
-      this.animatedWorld.push({ mesh: ring, speed: (i % 2 ? -1 : 1) * (0.18 + i * 0.07), axis: 'z' });
-    }
-    for (let i = 0; i < 6; i++) {
-      const angle = i / 6 * Math.PI * 2;
-      const strut = new THREE.Mesh(new THREE.BoxGeometry(0.35, 3.8, 0.35), darkMetal);
-      strut.position.set(Math.cos(angle) * 3.4, 2.1, Math.sin(angle) * 3.4);
-      strut.rotation.z = Math.cos(angle) * -0.22;
-      strut.rotation.x = Math.sin(angle) * 0.22;
-      reactor.add(strut);
-    }
-    world.add(reactor);
-    this.obstacles.push({ minX: -4.4, maxX: 4.4, minZ: -4.4, maxZ: 4.4 });
-    this.worldColliders.push(base, core);
-
-    // Deliberately placed cover creates useful combat lanes.
-    const covers = [
-      [-12, -10, 4, 1.3, 1.7], [12, 10, 4, 1.3, 1.7], [-14, 14, 1.4, 5, 2.1], [14, -14, 1.4, 5, 2.1],
-      [-28, 1, 5, 1.4, 1.4], [28, -1, 5, 1.4, 1.4], [1, 29, 1.4, 5, 1.8], [-1, -29, 1.4, 5, 1.8],
-      [-30, -24, 3, 3, 2.7], [30, 24, 3, 3, 2.7], [26, -29, 4, 2, 1.5], [-26, 29, 4, 2, 1.5],
-      [-8, 35, 2, 2, 2.4], [8, -35, 2, 2, 2.4], [37, 10, 2, 4, 2.2], [-37, -10, 2, 4, 2.2],
-    ];
-    covers.forEach(([x, z, w, d, h], index) => {
-      const group = new THREE.Group();
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), index % 3 === 0 ? blackMetal : darkMetal);
-      mesh.position.y = h / 2;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      group.add(mesh);
-      const strip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.025, 0.045, d + 0.025), index % 4 === 0 ? purpleGlow : dimGlow);
-      strip.position.y = h * 0.72;
-      group.add(strip);
-      group.position.set(x, 0, z);
-      world.add(group);
-      this.obstacles.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
-      this.worldColliders.push(mesh);
-    });
-
-    // Arena walls and distant procedural megacity.
-    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x0b1317, metalness: 0.75, roughness: 0.5 });
-    [[0, -70, 142, 2], [0, 70, 142, 2], [-70, 0, 2, 142], [70, 0, 2, 142]].forEach(([x, z, w, d]) => {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, 5, d), wallMaterial);
-      wall.position.set(x, 2.5, z);
-      world.add(wall);
-      this.worldColliders.push(wall);
-      const lightStrip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.05, 0.08, d + 0.05), dimGlow);
-      lightStrip.position.set(x, 4.2, z);
-      world.add(lightStrip);
-    });
-    let seed = 7147;
-    const seeded = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
-    for (let i = 0; i < 75; i++) {
-      const angle = seeded() * Math.PI * 2;
-      const radius = 78 + seeded() * 62;
-      const width = 4 + seeded() * 10;
-      const depth = 4 + seeded() * 10;
-      const height = 12 + seeded() * 65;
-      const building = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(0.52, 0.15, 0.025 + seeded() * 0.035), roughness: 0.8, metalness: 0.45 }));
-      building.position.set(Math.cos(angle) * radius, height / 2 - 1, Math.sin(angle) * radius);
-      world.add(building);
-      if (i % 2 === 0) {
-        const windowStrip = new THREE.Mesh(new THREE.BoxGeometry(width + 0.05, 0.12 + seeded() * 0.18, depth + 0.05), i % 6 === 0 ? purpleGlow : dimGlow);
-        windowStrip.position.copy(building.position);
-        windowStrip.position.y = height * (0.35 + seeded() * 0.5);
-        world.add(windowStrip);
-      }
-      if (i % 7 === 0) {
-        const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 9, 5), dimGlow);
-        antenna.position.copy(building.position);
-        antenna.position.y = height + 3.5;
-        world.add(antenna);
-      }
-    }
-
-    // Spawn gates.
-    this.spawnPoints = [
-      new THREE.Vector3(-48, 0, -48), new THREE.Vector3(48, 0, -48), new THREE.Vector3(-48, 0, 48), new THREE.Vector3(48, 0, 48),
-      new THREE.Vector3(0, 0, -54), new THREE.Vector3(0, 0, 54), new THREE.Vector3(-54, 0, 0), new THREE.Vector3(54, 0, 0),
-    ];
-    this.spawnPoints.forEach((point, index) => {
-      const gate = new THREE.Group();
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(2.15, 0.09, 8, 40), index % 2 ? purpleGlow : cyanGlow);
-      ring.position.y = 2.2;
-      gate.add(ring);
-      const sides = [-1, 1];
-      sides.forEach((side) => {
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.22, 4.6, 0.35), darkMetal);
-        post.position.set(side * 2.15, 2.1, 0);
-        gate.add(post);
-      });
-      gate.position.copy(point);
-      gate.lookAt(0, 2, 0);
-      world.add(gate);
-      this.animatedWorld.push({ mesh: ring, speed: index % 2 ? -0.3 : 0.3, axis: 'z' });
-    });
-
-    const dustCount = this.isTouch ? 350 : 800;
-    const dustPositions = new Float32Array(dustCount * 3);
-    for (let i = 0; i < dustCount; i++) {
-      dustPositions[i * 3] = random(-75, 75);
-      dustPositions[i * 3 + 1] = random(0.2, 25);
-      dustPositions[i * 3 + 2] = random(-75, 75);
-    }
-    const dustGeometry = new THREE.BufferGeometry();
-    dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
-    const dust = new THREE.Points(dustGeometry, new THREE.PointsMaterial({ color: 0x65b8a9, size: 0.045, transparent: true, opacity: 0.45, depthWrite: false }));
-    world.add(dust);
-    this.dust = dust;
+  applyQuality() {
+    // 希沃白板常见 3840×2160 面板 + 集显，主动降低内部渲染分辨率保证稳定帧率。
+    const cap = this.isBoard ? (innerWidth > 2200 ? 0.7 : 1) : this.isTouch ? 1.25 : 1.65;
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, cap));
   }
 
   createViewModel() {
@@ -294,8 +168,8 @@ export class Game {
     this.camera.add(this.weaponRoot);
     this.scene.add(this.camera);
     this.weaponRoot.position.set(0.36, -0.31, -0.62);
-    this.weaponRoot.scale.setScalar(this.isTouch && innerHeight > innerWidth ? 0.72 : 0.9);
-    const viewLight = new THREE.PointLight(0xb7fff0, 2.8, 4);
+    this.applyWeaponScale();
+    const viewLight = new THREE.PointLight(0xa8eadc, 1.35, 3.6);
     viewLight.position.set(0.2, 0.25, 0.25);
     this.camera.add(viewLight);
     this.muzzleLight = new THREE.PointLight(0x72ffda, 0, 3);
@@ -303,54 +177,37 @@ export class Game {
     this.buildWeaponModel(0);
   }
 
+  applyWeaponScale() {
+    if (!this.weaponRoot) return;
+    const portrait = this.isTouch && innerHeight > innerWidth;
+    this.weaponRoot.scale.setScalar(this.isBoard ? 0.92 : portrait ? 0.68 : 0.8);
+  }
+
   buildWeaponModel(index) {
     if (this.weaponModel) this.weaponRoot.remove(this.weaponModel);
-    const group = new THREE.Group();
-    const metal = new THREE.MeshStandardMaterial({ color: index === 2 ? 0x354b5c : 0x3b4b47, emissive: index === 2 ? 0x101c26 : 0x101c19, emissiveIntensity: 0.45, metalness: 0.82, roughness: 0.3 });
-    const dark = new THREE.MeshStandardMaterial({ color: 0x11191b, emissive: 0x050808, emissiveIntensity: 0.3, metalness: 0.75, roughness: 0.4 });
-    const glow = new THREE.MeshBasicMaterial({ color: index === 1 ? 0xffa34d : index === 2 ? 0x69bfff : index === 3 ? 0x7de8ff : 0x54f7d2, toneMapped: false });
-    const addBox = (w, h, d, x, y, z, material = metal) => {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-      mesh.position.set(x, y, z);
-      group.add(mesh);
-      return mesh;
-    };
-    if (index === 0) {
-      addBox(0.18, 0.18, 0.65, 0, 0, -0.12);
-      addBox(0.1, 0.09, 0.48, 0, 0.025, -0.64, dark);
-      addBox(0.13, 0.27, 0.16, 0, -0.19, 0.04, dark).rotation.x = -0.18;
-      addBox(0.04, 0.035, 0.5, 0.095, 0.02, -0.18, glow);
-      addBox(0.07, 0.06, 0.12, 0, 0.13, -0.16, dark);
-    } else if (index === 1) {
-      addBox(0.23, 0.21, 0.72, 0, 0, -0.14);
-      addBox(0.15, 0.15, 0.5, 0, 0.03, -0.7, dark);
-      addBox(0.16, 0.1, 0.25, 0, -0.12, -0.5, metal);
-      addBox(0.13, 0.3, 0.15, 0, -0.2, 0.05, dark).rotation.x = -0.22;
-      addBox(0.245, 0.035, 0.28, 0, 0.02, -0.25, glow);
-    } else if (index === 2) {
-      addBox(0.17, 0.19, 0.86, 0, 0, -0.22);
-      addBox(0.065, 0.065, 0.7, 0, 0.02, -0.94, dark);
-      addBox(0.035, 0.07, 0.82, 0.095, 0.02, -0.42, glow);
-      addBox(0.035, 0.07, 0.82, -0.095, 0.02, -0.42, glow);
-      addBox(0.08, 0.12, 0.3, 0, 0.15, -0.2, dark);
-      addBox(0.13, 0.28, 0.16, 0, -0.2, 0.04, dark).rotation.x = -0.18;
-    } else {
-      addBox(0.2, 0.2, 0.68, 0, 0, -0.14);
-      addBox(0.12, 0.12, 0.42, 0, 0.015, -0.62, dark);
-      addBox(0.09, 0.09, 0.26, 0, 0.025, -0.9, glow);
-      [-1, 1].forEach((side) => {
-        addBox(0.045, 0.16, 0.52, side * 0.13, 0.05, -0.3, glow);
-        addBox(0.07, 0.1, 0.3, side * 0.16, -0.14, 0.02, dark);
-      });
-      addBox(0.14, 0.28, 0.16, 0, -0.2, 0.06, dark).rotation.x = -0.18;
-      const coil = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.025, 6, 16), glow);
-      coil.position.set(0, 0.02, -0.78);
-      group.add(coil);
+    const model = createWeaponModel(index);
+    this.weaponRoot.add(model.group);
+    this.weaponModel = model.group;
+    this.weaponParts = model;
+    this.muzzleLight.position.set(0, 0.02, model.muzzleZ + 0.12);
+  }
+
+  updateWeaponParts(dt) {
+    const parts = this.weaponParts;
+    if (!parts) return;
+    const reload = this.reloadTimer > 0;
+    const reloadProgress = reload ? 1 - this.reloadTimer / Math.max(0.001, WEAPONS[this.weaponIndex].reload / this.player.reloadMultiplier) : 0;
+    const dip = reload ? Math.sin(reloadProgress * Math.PI) : 0;
+    parts.magazine.position.y = lerp(parts.magazine.position.y, (this.weaponIndex === 1 ? -0.19 : -0.19) - dip * 0.22, 1 - Math.exp(-dt * 16));
+    parts.magazine.rotation.x = lerp(parts.magazine.rotation.x, dip * 0.55, 1 - Math.exp(-dt * 14));
+    parts.bolt.position.z = lerp(parts.bolt.position.z, -0.16 + this.weaponRecoil * 0.085, 1 - Math.exp(-dt * 22));
+    parts.flash.visible = this.muzzleTimer > 0;
+    if (parts.flash.visible) {
+      const pulse = this.muzzleTimer / 0.055;
+      parts.flash.scale.setScalar(0.65 + pulse * 0.7);
+      parts.flash.rotation.z += dt * 18;
     }
-    group.traverse((child) => { child.frustumCulled = false; child.renderOrder = 10; });
-    this.weaponRoot.add(group);
-    this.weaponModel = group;
-    this.muzzleLight.position.set(0, 0.02, index === 2 ? -1.25 : index === 3 ? -1.05 : -0.95);
+    if (parts.coils) parts.coils.children.forEach((ring, i) => { ring.rotation.z += dt * (i % 2 ? -2.2 : 2.2); });
   }
 
   resetPlayer() {
@@ -427,6 +284,7 @@ export class Game {
     this.intermission = true;
     this.requestLock();
     this.updateHUD(true);
+    if (this.isBoard) this.callbacks.onToast?.('白板课堂模式 // 左侧移动 · 右侧滑动瞄准 · 可开启自动演示', 3200);
   }
 
   quit() {
@@ -525,62 +383,96 @@ export class Game {
   bindTouchControls() {
     const stick = document.getElementById('move-stick');
     const knob = stick.querySelector('i');
-    let stickTouch = null;
-    const updateStick = (touch) => {
+    let stickPointer = null;
+    const updateStick = (event) => {
       const rect = stick.getBoundingClientRect();
-      let x = touch.clientX - (rect.left + rect.width / 2);
-      let y = touch.clientY - (rect.top + rect.height / 2);
+      let x = event.clientX - (rect.left + rect.width / 2);
+      let y = event.clientY - (rect.top + rect.height / 2);
       const length = Math.hypot(x, y);
       const max = rect.width * 0.34;
       if (length > max) { x *= max / length; y *= max / length; }
       knob.style.transform = `translate(${x}px, ${y}px)`;
       this.touchMove = { x: x / max, y: y / max };
     };
-    stick.addEventListener('touchstart', (event) => { event.preventDefault(); stickTouch = event.changedTouches[0].identifier; updateStick(event.changedTouches[0]); }, { passive: false });
-    stick.addEventListener('touchmove', (event) => { event.preventDefault(); const touch = [...event.changedTouches].find((t) => t.identifier === stickTouch); if (touch) updateStick(touch); }, { passive: false });
-    const endStick = (event) => { if ([...event.changedTouches].some((t) => t.identifier === stickTouch)) { stickTouch = null; this.touchMove = { x: 0, y: 0 }; knob.style.transform = ''; } };
-    stick.addEventListener('touchend', endStick);
-    stick.addEventListener('touchcancel', endStick);
-
-    const look = document.getElementById('look-zone');
-    let lookTouch = null;
-    let lastLook = null;
-    look.addEventListener('touchstart', (event) => { event.preventDefault(); const touch = event.changedTouches[0]; lookTouch = touch.identifier; lastLook = { x: touch.clientX, y: touch.clientY }; }, { passive: false });
-    look.addEventListener('touchmove', (event) => {
+    stick.addEventListener('pointerdown', (event) => {
       event.preventDefault();
-      const touch = [...event.changedTouches].find((t) => t.identifier === lookTouch);
-      if (!touch || !lastLook || this.state !== 'playing') return;
-      this.yaw -= (touch.clientX - lastLook.x) * 0.0042;
-      this.pitch = clamp(this.pitch - (touch.clientY - lastLook.y) * 0.0037, -1.4, 1.4);
-      lastLook = { x: touch.clientX, y: touch.clientY };
+      stick.setPointerCapture?.(event.pointerId);
+      stickPointer = event.pointerId;
+      updateStick(event);
     }, { passive: false });
-    const endLook = () => { lookTouch = null; lastLook = null; };
-    look.addEventListener('touchend', endLook);
-    look.addEventListener('touchcancel', endLook);
+    stick.addEventListener('pointermove', (event) => {
+      if (event.pointerId !== stickPointer) return;
+      event.preventDefault();
+      updateStick(event);
+    }, { passive: false });
+    const endStick = (event) => {
+      if (event.pointerId !== stickPointer) return;
+      stickPointer = null;
+      this.touchMove = { x: 0, y: 0 };
+      knob.style.transform = '';
+    };
+    stick.addEventListener('pointerup', endStick);
+    stick.addEventListener('pointercancel', endStick);
+
+    // 白板支持多点触控：视角滑动可与移动摇杆、开火、技能同时使用。
+    const look = document.getElementById('look-zone');
+    const lookPointers = new Map();
+    look.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      look.setPointerCapture?.(event.pointerId);
+      lookPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }, { passive: false });
+    look.addEventListener('pointermove', (event) => {
+      const last = lookPointers.get(event.pointerId);
+      if (!last || this.state !== 'playing') return;
+      event.preventDefault();
+      this.yaw -= (event.clientX - last.x) * (this.isBoard ? 0.0026 : 0.0042);
+      this.pitch = clamp(this.pitch - (event.clientY - last.y) * (this.isBoard ? 0.0024 : 0.0037), -1.4, 1.4);
+      lookPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }, { passive: false });
+    const endLook = (event) => lookPointers.delete(event.pointerId);
+    look.addEventListener('pointerup', endLook);
+    look.addEventListener('pointercancel', endLook);
 
     const fire = document.getElementById('mobile-fire');
-    fire.addEventListener('touchstart', (event) => { event.preventDefault(); this.firing = true; this.shotThisHold = false; }, { passive: false });
+    fire.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      fire.setPointerCapture?.(event.pointerId);
+      this.firing = true;
+      this.shotThisHold = false;
+    }, { passive: false });
     const stopFire = (event) => { event.preventDefault(); this.firing = false; this.shotThisHold = false; };
-    fire.addEventListener('touchend', stopFire);
-    fire.addEventListener('touchcancel', stopFire);
+    fire.addEventListener('pointerup', stopFire);
+    fire.addEventListener('pointercancel', stopFire);
+
     const bindButton = (id, action) => {
       const element = document.getElementById(id);
       if (!element) return;
-      element.addEventListener('touchstart', (event) => { event.preventDefault(); action(); }, { passive: false });
+      element.addEventListener('pointerdown', (event) => { event.preventDefault(); action(); }, { passive: false });
+      element.addEventListener('contextmenu', (event) => event.preventDefault());
     };
     bindButton('mobile-reload', () => this.reload());
     bindButton('mobile-dash', () => this.dash());
     bindButton('mobile-pulse', () => this.pulse());
     bindButton('mobile-switch', () => this.switchWeapon((this.weaponIndex + 1) % (this.unlockedWeapon + 1)));
     bindButton('mobile-overdrive', () => this.activateOverdrive());
+    bindButton('mobile-aim', () => { this.aiming = !this.aiming; document.getElementById('mobile-aim')?.classList.toggle('active', this.aiming); });
+    bindButton('mobile-demo', () => this.setDemoMode(!this.demoMode));
+  }
+
+  setDemoMode(enabled) {
+    this.demoMode = Boolean(enabled);
+    document.getElementById('mobile-demo')?.classList.toggle('active', this.demoMode);
+    this.callbacks.onToast?.(this.demoMode ? '课堂演示模式已开启 · 自动锁定并开火' : '课堂演示模式已关闭', 2200);
+    this.callbacks.onDemo?.(this.demoMode);
   }
 
   resize() {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(innerWidth, innerHeight);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.isTouch ? 1.25 : 1.65));
-    if (this.weaponRoot) this.weaponRoot.scale.setScalar(this.isTouch && innerHeight > innerWidth ? 0.72 : 0.9);
+    this.applyQuality();
+    this.applyWeaponScale();
   }
 
   startWave() {
@@ -631,102 +523,46 @@ export class Game {
     point.z += random(-2.5, 2.5);
     const group = new THREE.Group();
     group.position.copy(point);
-    const material = new THREE.MeshStandardMaterial({ color: type === 'boss' ? 0x291713 : 0x171c20, emissive: data.color, emissiveIntensity: 0.45, metalness: 0.8, roughness: 0.3, transparent: type === 'phantom', opacity: 1 });
-    const glow = new THREE.MeshBasicMaterial({ color: data.color, toneMapped: false });
-    const dark = new THREE.MeshStandardMaterial({ color: 0x090b0d, metalness: 0.9, roughness: 0.25 });
+    const phased = type === 'phantom';
+    const material = new THREE.MeshStandardMaterial({ color: type === 'boss' ? 0x3a241c : 0x243238, emissive: data.color, emissiveIntensity: 0.8, metalness: 0.8, roughness: 0.34, transparent: phased, opacity: 1 });
+    const glow = new THREE.MeshBasicMaterial({ color: data.color, toneMapped: false, transparent: phased, opacity: 1 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x0c1418, metalness: 0.9, roughness: 0.28, transparent: phased, opacity: 1 });
+    const accent = new THREE.MeshStandardMaterial({ color: 0x2b3b40, emissive: data.color, emissiveIntensity: 0.16, metalness: 0.86, roughness: 0.3, transparent: phased, opacity: 1 });
+    const warning = new THREE.MeshBasicMaterial({ color: 0xffc24d, toneMapped: false, transparent: phased, opacity: 1 });
+    const mats = { body: material, dark, glow, accent, warning };
+    const model = buildEnemyModel(type, mats);
     const diff = this.difficulty;
     const enemy = {
-      type, group, material, health: data.health * (1 + Math.max(0, this.wave - 1) * (type === 'boss' ? 0.12 : 0.085)) * diff.hp, maxHealth: 0,
+      type, group, material, fadeMaterials: [material, glow, dark, accent, warning],
+      health: data.health * (1 + Math.max(0, this.wave - 1) * (type === 'boss' ? 0.12 : 0.085)) * diff.hp, maxHealth: 0,
       speed: data.speed * (1 + Math.min(0.45, this.wave * 0.018)), damage: data.damage * (1 + this.wave * 0.025) * diff.damage, score: Math.round(data.score * diff.score),
       radius: data.radius, name: data.name, attackCooldown: random(0.4, 1.3), spawnTime: 0.85, dead: false, deathTimer: 0,
       strafe: Math.random() > 0.5 ? 1 : -1, phase: Math.random() * Math.PI * 2, hitTimer: 0, healthBar: null, barFill: null,
       phased: false, phaseTimer: random(1.4, 2.8), fuse: 0,
+      parts: model.dynamic, height: model.height, baseY: model.baseY,
     };
     enemy.maxHealth = enemy.health;
-    const addPart = (geometry, mat, x, y, z, critical = false) => {
-      const mesh = new THREE.Mesh(geometry, mat);
-      mesh.position.set(x, y, z);
-      mesh.castShadow = !this.isTouch;
-      mesh.userData.enemy = enemy;
-      mesh.userData.critical = critical;
-      group.add(mesh);
-      this.enemyHitMeshes.push(mesh);
-      return mesh;
-    };
-    if (type === 'runner') {
-      addPart(new THREE.BoxGeometry(0.72, 0.85, 0.45), material, 0, 1.15, 0);
-      addPart(new THREE.OctahedronGeometry(0.33, 0), material, 0, 1.82, 0, true);
-      addPart(new THREE.BoxGeometry(0.42, 0.07, 0.36), glow, 0, 1.83, -0.22, true);
-      [-1, 1].forEach((side) => {
-        const arm = addPart(new THREE.BoxGeometry(0.18, 0.82, 0.2), dark, side * 0.51, 1.13, 0);
-        arm.rotation.z = side * -0.2;
-        addPart(new THREE.BoxGeometry(0.23, 0.78, 0.26), dark, side * 0.24, 0.4, 0);
-      });
-      enemy.height = 2.2;
-    } else if (type === 'drone') {
-      addPart(new THREE.SphereGeometry(0.55, 12, 8), material, 0, 1.85, 0);
-      addPart(new THREE.OctahedronGeometry(0.3, 0), glow, 0, 1.85, -0.43, true);
-      const ring = addPart(new THREE.TorusGeometry(0.82, 0.065, 6, 24), dark, 0, 1.85, 0);
-      ring.rotation.x = Math.PI / 2;
-      [-1, 1].forEach((side) => addPart(new THREE.BoxGeometry(0.65, 0.09, 0.28), material, side * 0.72, 1.85, 0));
-      enemy.height = 2.6;
-      enemy.baseY = 0.35;
-    } else if (type === 'tank') {
-      addPart(new THREE.BoxGeometry(1.45, 1.45, 1.05), material, 0, 1.25, 0);
-      addPart(new THREE.BoxGeometry(0.75, 0.55, 0.65), dark, 0, 2.2, 0, true);
-      addPart(new THREE.BoxGeometry(0.5, 0.09, 0.68), glow, 0, 2.23, -0.08, true);
-      [-1, 1].forEach((side) => {
-        addPart(new THREE.BoxGeometry(0.5, 1.1, 0.65), material, side * 0.97, 1.3, 0);
-        addPart(new THREE.CylinderGeometry(0.1, 0.14, 0.9, 8), dark, side * 0.97, 1.55, -0.65).rotation.x = Math.PI / 2;
-        addPart(new THREE.BoxGeometry(0.5, 0.6, 0.65), dark, side * 0.45, 0.32, 0);
-      });
-      enemy.height = 2.8;
-    } else if (type === 'phantom') {
-      addPart(new THREE.OctahedronGeometry(0.5, 0), material, 0, 1.35, 0);
-      addPart(new THREE.OctahedronGeometry(0.22, 0), glow, 0, 1.35, -0.38, true);
-      [-1, 1].forEach((side) => {
-        const blade = addPart(new THREE.BoxGeometry(0.09, 1.05, 0.28), dark, side * 0.5, 1.25, 0);
-        blade.rotation.z = side * 0.35;
-      });
-      addPart(new THREE.ConeGeometry(0.2, 0.9, 5), material, 0, 0.5, 0).rotation.x = Math.PI;
-      enemy.height = 2.2;
-      enemy.baseY = 0.25;
-    } else if (type === 'bomber') {
-      addPart(new THREE.SphereGeometry(0.52, 12, 9), material, 0, 1.3, 0);
-      addPart(new THREE.IcosahedronGeometry(0.28, 0), glow, 0, 1.3, -0.4, true);
-      const belt = addPart(new THREE.TorusGeometry(0.62, 0.07, 6, 20), glow, 0, 1.3, 0);
-      belt.rotation.x = Math.PI / 2;
-      [-1, 1].forEach((side) => {
-        addPart(new THREE.BoxGeometry(0.36, 0.1, 0.22), dark, side * 0.62, 1.3, 0);
-        addPart(new THREE.ConeGeometry(0.13, 0.5, 5), material, side * 0.34, 0.55, 0).rotation.x = Math.PI;
-      });
-      enemy.height = 2.1;
-      enemy.baseY = 0.3;
-    } else if (type === 'boss') {
-      addPart(new THREE.SphereGeometry(1.65, 20, 14), material, 0, 3.2, 0);
-      addPart(new THREE.IcosahedronGeometry(0.85, 1), glow, 0, 3.2, -1.05, true);
-      for (let i = 0; i < 3; i++) {
-        const ring = addPart(new THREE.TorusGeometry(2 + i * 0.25, 0.1, 8, 40), i === 1 ? glow : dark, 0, 3.2, 0);
-        ring.rotation.x = Math.PI / 2 + i * 0.45;
-        ring.userData.spin = (i % 2 ? -1 : 1) * (0.4 + i * 0.15);
+    const register = (object) => {
+      object.userData.enemy = enemy;
+      if (object.isMesh) {
+        object.castShadow = !this.isTouch && !this.lowPower;
+        this.enemyHitMeshes.push(object);
       }
-      [-1, 1].forEach((side) => {
-        addPart(new THREE.BoxGeometry(0.8, 2.8, 0.8), material, side * 2.15, 2.7, 0);
-        addPart(new THREE.CylinderGeometry(0.19, 0.26, 1.5, 8), dark, side * 2.15, 2.8, -1).rotation.x = Math.PI / 2;
-      });
-      enemy.height = 5.5;
-      enemy.baseY = 0.4;
-    }
+      object.children.forEach(register);
+    };
+    model.allMeshes.forEach((object) => { group.add(object); register(object); });
     const barGroup = new THREE.Group();
-    const barBack = new THREE.Mesh(new THREE.PlaneGeometry(type === 'boss' ? 3 : 1.2, 0.075), new THREE.MeshBasicMaterial({ color: 0x101818, transparent: true, opacity: 0.85, depthTest: false }));
-    const barFill = new THREE.Mesh(new THREE.PlaneGeometry(type === 'boss' ? 3 : 1.2, 0.05), new THREE.MeshBasicMaterial({ color: data.color, depthTest: false }));
+    const barWidth = type === 'boss' ? 3.2 : 1.35;
+    const barBack = new THREE.Mesh(new THREE.PlaneGeometry(barWidth, 0.085), new THREE.MeshBasicMaterial({ color: 0x101818, transparent: true, opacity: 0.85, depthTest: false }));
+    const barFill = new THREE.Mesh(new THREE.PlaneGeometry(barWidth, 0.055), new THREE.MeshBasicMaterial({ color: data.color, depthTest: false }));
     barFill.position.z = 0.005;
     barGroup.add(barBack, barFill);
-    barGroup.position.y = enemy.height + 0.3;
+    barGroup.position.y = enemy.height + 0.35;
     barGroup.visible = type === 'boss';
     group.add(barGroup);
     enemy.healthBar = barGroup;
     enemy.barFill = barFill;
+    enemy.barHalf = barWidth / 2;
     group.scale.setScalar(0.02);
     this.scene.add(group);
     this.enemies.push(enemy);
@@ -749,8 +585,24 @@ export class Game {
       }
       enemy.phase += dt;
       enemy.hitTimer -= dt;
-      enemy.material.emissiveIntensity = enemy.hitTimer > 0 ? 3.5 : (enemy.type === 'boss' ? 0.75 : 0.45);
+      enemy.material.emissiveIntensity = enemy.hitTimer > 0 ? 3.2 : (enemy.type === 'boss' ? 1.0 : 0.8);
       enemy.group.children.forEach((child) => { if (child.userData.spin) child.rotation.z += child.userData.spin * dt; });
+      const parts = enemy.parts;
+      if (parts) {
+        parts.legs?.forEach((leg, i) => { leg.rotation.x = Math.sin(enemy.phase * 7 + (i % 2 ? Math.PI : 0)) * 0.34; });
+        parts.rotors?.forEach((rotor, i) => { rotor.rotation.y += dt * (5 + i * 1.5); });
+        parts.rings?.forEach((ring, i) => { if (!ring.userData.spin) ring.rotation.z += dt * (i % 2 ? -0.55 : 0.55); });
+        parts.shards?.forEach((shard, i) => {
+          const angle = shard.userData.angle + enemy.phase * 0.65;
+          shard.position.x = Math.cos(angle) * 0.85;
+          shard.position.z = Math.sin(angle) * 0.55;
+          shard.position.y = shard.userData.baseY + Math.sin(enemy.phase * 2 + i) * 0.12;
+          shard.rotation.y += dt * 1.6;
+        });
+        parts.wings?.forEach((wing, i) => { wing.rotation.z = Math.sin(enemy.phase * 5 + i) * 0.22; });
+        parts.turrets?.forEach((turret) => { turret.rotation.y = Math.sin(enemy.phase * 0.8) * 0.32; });
+        if (parts.core) parts.core.scale.setScalar(1 + Math.sin(enemy.phase * 4.5) * 0.09);
+      }
       if (enemy.spawnTime > 0) {
         enemy.spawnTime -= dt;
         const scale = clamp(1 - enemy.spawnTime / 0.85, 0.02, 1);
@@ -763,7 +615,7 @@ export class Game {
         if (enemy.phaseTimer <= 0) {
           enemy.phased = !enemy.phased;
           enemy.phaseTimer = enemy.phased ? 1.05 : 2.5;
-          enemy.material.opacity = enemy.phased ? 0.2 : 1;
+          enemy.fadeMaterials.forEach((item) => { item.opacity = enemy.phased ? 0.16 : 1; });
           this.spawnParticles(enemy.group.position.clone().add(new THREE.Vector3(0, 1.2, 0)), 0x5ce1ff, this.isTouch ? 4 : 9, 2);
         }
       }
@@ -978,6 +830,9 @@ export class Game {
     this.camera.fov = lerp(this.camera.fov, targetFov, 1 - Math.exp(-dt * 10));
     this.camera.updateProjectionMatrix();
     this.weaponRecoil = lerp(this.weaponRecoil, 0, 1 - Math.exp(-dt * 13));
+    this.updateWeaponParts(dt);
+    if (this.isBoard && this.weaponState[this.weaponIndex].ammo === 0 && !player.overdrive && this.reloadTimer <= 0) this.reload();
+    this.updateDemoAim(dt);
     const portraitTouch = this.isTouch && innerHeight > innerWidth;
     const aimX = this.aiming ? 0 : portraitTouch ? 0.17 : 0.36;
     const aimY = this.aiming ? -0.22 : portraitTouch ? -0.28 : -0.31;
@@ -989,6 +844,36 @@ export class Game {
     if (this.firing && (WEAPONS[this.weaponIndex].auto || !this.shotThisHold)) this.fireWeapon();
     if (this.comboTimer > 0) this.comboTimer -= dt;
     else this.combo = lerp(this.combo, 1, dt * 3);
+  }
+
+  /** 课堂演示：自动锁定最近的敌人并持续开火，方便在白板上无键盘展示。 */
+  pickDemoTarget(origin) {
+    let best = null;
+    let bestDistance = Infinity;
+    for (const enemy of this.enemies) {
+      if (enemy.dead || enemy.phased || enemy.spawnTime > 0) continue;
+      const point = enemy.group.position.clone().add(new THREE.Vector3(0, enemy.type === 'boss' ? 3.2 : enemy.height * 0.55, 0));
+      const distance = point.distanceTo(origin);
+      if (distance < bestDistance) { bestDistance = distance; best = point; }
+    }
+    return best;
+  }
+
+  updateDemoAim(dt) {
+    if (!this.demoMode || this.state !== 'playing') return;
+    const origin = this.camera.getWorldPosition(new THREE.Vector3());
+    const target = this.pickDemoTarget(origin);
+    if (!target) { this.firing = false; return; }
+    const dx = target.x - origin.x;
+    const dz = target.z - origin.z;
+    const desiredYaw = Math.atan2(-dx, -dz);
+    let delta = desiredYaw - this.yaw;
+    while (delta > Math.PI) delta -= Math.PI * 2;
+    while (delta < -Math.PI) delta += Math.PI * 2;
+    this.yaw += delta * Math.min(1, dt * 3.4);
+    const horizontal = Math.hypot(dx, dz);
+    this.pitch = lerp(this.pitch, Math.atan2(target.y - origin.y, horizontal), Math.min(1, dt * 3));
+    this.firing = true;
   }
 
   movePlayer(dx, dz) {
@@ -1122,13 +1007,14 @@ export class Game {
 
   getAimAssist(origin, direction) {
     let best = null;
-    let bestAngle = 0.12;
+    let bestAngle = this.isBoard ? 0.2 : 0.12;
+    const maxRange = this.isBoard ? 60 : 45;
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.spawnTime > 0 || enemy.phased) continue;
-      const target = enemy.group.position.clone().add(new THREE.Vector3(0, enemy.type === 'boss' ? 3 : 1.2, 0));
+      const target = enemy.group.position.clone().add(new THREE.Vector3(0, enemy.type === 'boss' ? 3 : enemy.height * 0.5, 0));
       const toTarget = target.sub(origin);
       const distance = toTarget.length();
-      if (distance > 45) continue;
+      if (distance > maxRange) continue;
       toTarget.normalize();
       const angle = Math.acos(clamp(direction.dot(toTarget), -1, 1));
       if (angle < bestAngle) { bestAngle = angle; best = toTarget; }
@@ -1149,7 +1035,7 @@ export class Game {
     enemy.healthBar.visible = true;
     const ratio = clamp(enemy.health / enemy.maxHealth, 0, 1);
     enemy.barFill.scale.x = ratio;
-    enemy.barFill.position.x = -(1 - ratio) * (enemy.type === 'boss' ? 1.5 : 0.6);
+    enemy.barFill.position.x = -(1 - ratio) * (enemy.barHalf || 0.6);
     this.showDamageNumber(enemy, final, Boolean(meta.critical), enemy.health <= 0);
     if (enemy.health <= 0) {
       this.killEnemy(enemy, direction);
@@ -1284,7 +1170,7 @@ export class Game {
 
   spawnParticles(position, color, count = 8, speed = 2) {
     const material = new THREE.MeshBasicMaterial({ color, transparent: true, toneMapped: false });
-    const allowed = Math.min(count, this.isTouch ? 25 : 80);
+    const allowed = Math.min(count, this.maxParticles);
     for (let i = 0; i < allowed; i++) {
       const mesh = new THREE.Mesh(this.sharedParticleGeometry, material.clone());
       mesh.position.copy(position);
@@ -1476,6 +1362,7 @@ export class Game {
       energy: this.player.energy, energyMax: this.player.energyMax, overdrive: this.player.overdrive,
       difficulty: this.difficulty.label, critChance: this.player.critChance,
       intermission: this.intermission, elapsed: this.elapsed,
+      profile: this.profile, demo: this.demoMode, board: this.isBoard,
     });
   }
 
@@ -1531,7 +1418,10 @@ export class Game {
   animate() {
     requestAnimationFrame(this.animate);
     const dt = Math.min(this.clock.getDelta(), 0.05);
-    this.animatedWorld.forEach(({ mesh, speed, axis }) => { mesh.rotation[axis] += speed * dt; });
+    this.animatedWorld.forEach(({ mesh, speed, axis, update }) => {
+      if (update) update(dt, this.menuTime + this.elapsed);
+      else if (axis) mesh.rotation[axis] += speed * dt;
+    });
     if (this.dust) this.dust.rotation.y += dt * 0.003;
     if (this.state === 'playing') {
       this.elapsed += dt;

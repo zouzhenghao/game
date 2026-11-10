@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#05090d" />
-    <meta name="description" content="NEXUS STRIKE 零界突击 V2.0——一款可直接在浏览器游玩的赛博科技风 3D 第一人称射击游戏。" />
-    <title>NEXUS STRIKE // 零界突击 V2.0</title>
+    <meta name="description" content="NEXUS STRIKE 零界突击 V3.0——可直接在浏览器游玩的赛博科技风 3D 第一人称射击游戏，支持电脑、手机与希沃白板大屏。" />
+    <title>NEXUS STRIKE // 零界突击 V3.0</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305090d'/%3E%3Cpath d='M14 46V18h8l12 17V18h8v28h-8L22 29v17z' fill='%2354f7d2'/%3E%3Cpath d='M46 18h5v28h-5z' fill='%2354f7d2'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="./assets/index-CTR3Fxxc.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CIpun23e.css">
+    <script type="module" crossorigin src="./assets/index-ZSZwTGXV.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DkLCaYX3.css">
   </head>
   <body>
     <div id="app">
@@ -63,6 +63,13 @@
               <button class="difficulty-chip selected" data-difficulty="standard">标准<small>推荐体验</small></button>
               <button class="difficulty-chip" data-difficulty="nightmare">噩梦<small>高压挑战</small></button>
             </div>
+            <div class="device-selector" role="group" aria-label="设备适配">
+              <span class="device-label">设备适配</span>
+              <button class="device-chip" data-device="auto">自动<small>智能识别</small></button>
+              <button class="device-chip" data-device="desktop">键鼠<small>电脑</small></button>
+              <button class="device-chip" data-device="mobile">触屏<small>手机</small></button>
+              <button class="device-chip" data-device="board">白板大屏<small>希沃 / 教学一体机</small></button>
+            </div>
             <div class="hero-actions">
               <button id="start-button" class="primary-button"><span>开始行动</span><b>ENTER</b><i>↗</i></button>
               <button id="training-button" class="secondary-button"><span class="play-icon">▷</span> 模拟训练</button>
@@ -88,7 +95,7 @@
         <footer class="menu-footer">
           <div class="record"><small>个人最佳纪录</small><strong id="best-score">000,000</strong><span>PTS</span></div>
           <div class="footer-line"></div>
-          <div class="system-info"><span>BUILD 2.0.0</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span></div>
+          <div class="system-info"><span>BUILD 3.0.0</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span><span id="device-badge">DEVICE / AUTO</span></div>
           <div class="scroll-cue">系统待命 <i></i></div>
         </footer>
       </section>
@@ -118,16 +125,21 @@
         <div id="interact-toast" class="interact-toast"></div>
         <div id="damage-numbers" class="damage-numbers"></div>
         <div id="achievement-toast" class="achievement-toast"><small>ACHIEVEMENT UNLOCKED</small><strong></strong><p></p></div>
+        <div id="board-badge" class="board-badge"><span>SEEWO BOARD // 课堂模式</span><b id="board-demo-state">手动操作</b></div>
 
         <div id="mobile-controls" class="mobile-controls">
           <div id="move-stick" class="touch-stick"><i></i><span>移动</span></div>
           <div id="look-zone" class="look-zone"></div>
           <button id="mobile-fire" class="mobile-fire" aria-label="开火"><i></i><span>FIRE</span></button>
-          <button id="mobile-reload" class="mobile-small reload" aria-label="装填">R</button>
-          <button id="mobile-dash" class="mobile-small dash" aria-label="冲刺">Q</button>
-          <button id="mobile-pulse" class="mobile-small pulse" aria-label="脉冲">E</button>
-          <button id="mobile-switch" class="mobile-small switch" aria-label="切换武器">⇄</button>
-          <button id="mobile-overdrive" class="mobile-small overdrive" aria-label="核心超载">F</button>
+          <div class="board-action-row">
+            <button id="mobile-reload" class="mobile-small reload" aria-label="装填">R</button>
+            <button id="mobile-dash" class="mobile-small dash" aria-label="冲刺">Q</button>
+            <button id="mobile-pulse" class="mobile-small pulse" aria-label="脉冲">E</button>
+            <button id="mobile-switch" class="mobile-small switch" aria-label="切换武器">⇄</button>
+            <button id="mobile-overdrive" class="mobile-small overdrive" aria-label="核心超载">F</button>
+            <button id="mobile-aim" class="mobile-small aim board-only" aria-label="精确瞄准">◎</button>
+            <button id="mobile-demo" class="mobile-small demo board-only" aria-label="课堂演示">AUTO</button>
+          </div>
         </div>
       </section>
 
