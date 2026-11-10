@@ -8,6 +8,26 @@ const lerp = THREE.MathUtils.lerp;
 const random = (min, max) => min + Math.random() * (max - min);
 
 /**
+ * 越界协议 // OVERBOUND —— 单机作弊密语。
+ * 在游戏中直接敲字母即可触发（大小写均可），密语需连续输入、整体匹配，
+ * 移动键 WASD 不会误触（除非恰好拼出整词）。另支持经典科乐美秘籍
+ * ↑↑↓↓←→←→BA 唤醒作弊清单。密语“复杂但好记”：都是游戏世界观里的英文协议词。
+ */
+const CHEAT_CODES = {
+  lockon: 'lock', autofire: 'auto', godmode: 'god', infinity: 'ammo',
+  xray: 'wall', timeslip: 'slow', purge: 'purge', arsenal: 'arsenal',
+  recharge: 'recharge', overbound: 'overbound', standdown: 'standdown', help: 'help',
+};
+const CHEAT_LABELS = {
+  lock: '锁头 // LOCK-ON', auto: '自动射击 // AUTO-FIRE', god: '无敌 // GOD-MODE',
+  ammo: '无限弹药 // INFINITY', wall: '透视 // X-RAY', slow: '子弹时间 // TIME-SLIP',
+  purge: '清场 // PURGE', arsenal: '全武器解锁 // ARSENAL', recharge: '能量回满 // RECHARGE',
+  overbound: '越界协议全开 // OVERBOUND', standdown: '协议解除 // STAND-DOWN', help: '作弊码清单 // HELP',
+};
+const CHEAT_SHORT = { god: '无敌', ammo: '无限弹', lock: '锁头', auto: '自动射', wall: '透视', slow: '时停' };
+const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
+
+/**
  * 设备档位：
  * - desktop：键鼠（含普通笔记本）
  * - mobile：手机 / 小尺寸触屏（多为竖屏）
@@ -128,6 +148,11 @@ export class Game {
     this.shotThisHold = false;
     this.yaw = 0;
     this.pitch = 0;
+    this.cheats = { god: false, ammo: false, lock: false, auto: false, wall: false, slow: false };
+    this.aimTarget = null;
+    this.cheatBuffer = '';
+    this.konami = [];
+    this.cheatToastTimer = 0;
     this.menuTime = 0;
     this.elapsed = 0;
     this.enemies = [];
@@ -375,6 +400,7 @@ export class Game {
         if (this.state === 'playing') this.pause();
         else if (this.state === 'paused') this.resume();
       }
+      this.handleCheatInput(event);
     });
     document.addEventListener('keyup', (event) => { this.keys[event.code] = false; });
     document.addEventListener('mousemove', (event) => {
@@ -997,6 +1023,163 @@ export class Game {
     this.firing = true;
   }
 
+  // ===== 越界协议 // OVERBOUND 作弊系统 =====
+
+  /** 处理键盘输入的作弊密语与科乐美主开关。 */
+  handleCheatInput(event) {
+    if (event.code === 'Backquote') { event.preventDefault?.(); this.toggleCheatConsole(); return; }
+    const ch = event.key;
+    if (ch && ch.length === 1 && /[a-zA-Z]/.test(ch)) {
+      this.cheatBuffer = (this.cheatBuffer + ch.toLowerCase()).slice(-26);
+      for (const code in CHEAT_CODES) {
+        if (this.cheatBuffer.endsWith(code)) { this.applyCheat(code); this.cheatBuffer = ''; break; }
+      }
+    }
+    this.konami.push(event.code);
+    if (this.konami.length > 12) this.konami.shift();
+    if (this.konami.slice(-KONAMI.length).join(',') === KONAMI.join(',')) {
+      this.konami = [];
+      this.toggleCheatConsole(true);
+      this.cheatToast('作弊码清单已展开 // ↑↑↓↓←→←→BA 或输入 HELP');
+    }
+  }
+
+  /** 执行一条作弊密语。 */
+  applyCheat(code) {
+    const action = CHEAT_CODES[code];
+    if (!action) return;
+    if (action === 'help') { this.toggleCheatConsole(true); this.cheatToast(CHEAT_LABELS.help); return; }
+    if (action === 'purge') { this.cheatPurge(); this.cheatToast(CHEAT_LABELS.purge + ' 已执行'); return; }
+    if (action === 'arsenal') { this.unlockedWeapon = WEAPONS.length - 1; this.updateHUD(true); this.cheatToast(CHEAT_LABELS.arsenal); this.refreshCheatBadge(); return; }
+    if (action === 'recharge') { this.cheatRecharge(); this.cheatToast(CHEAT_LABELS.recharge); this.refreshCheatBadge(); return; }
+    if (action === 'overbound') { Object.keys(this.cheats).forEach((k) => { this.cheats[k] = true; }); this.cheatToast(CHEAT_LABELS.overbound); this.refreshCheatBadge(); return; }
+    if (action === 'standdown') { Object.keys(this.cheats).forEach((k) => { this.cheats[k] = false; }); this.firing = false; this.aimTarget = null; this.updateLockReticle(null); this.cheatToast(CHEAT_LABELS.standdown); this.refreshCheatBadge(); return; }
+    const was = this.cheats[action];
+    this.cheats[action] = !was;
+    if (action === 'auto' && was) this.firing = false;
+    if (action === 'lock' && was) { this.aimTarget = null; this.updateLockReticle(null); }
+    this.cheatToast((this.cheats[action] ? '已激活 // ' : '已解除 // ') + CHEAT_LABELS[action]);
+    this.refreshCheatBadge();
+  }
+
+  /** 锁头 / 自动射击：每帧选取最贴近准星的敌人，平滑吸附其头部弱点。 */
+  updateCheats(dt) {
+    const c = this.cheats;
+    for (const e of this.enemies) {
+      if (e.dead || !e.healthBar) continue;
+      e.healthBar.visible = c.wall ? true : (e.health < e.maxHealth);
+    }
+    if (c.lock || c.auto) {
+      const origin = this.camera.getWorldPosition(new THREE.Vector3());
+      const target = this.pickCheatTarget(origin);
+      this.aimTarget = target;
+      if (target) {
+        const head = target.group.position.clone().add(new THREE.Vector3(0, Math.min(target.height * 0.85, target.height - 0.2), 0));
+        const dx = head.x - origin.x, dy = head.y - origin.y, dz = head.z - origin.z;
+        const desiredYaw = Math.atan2(-dx, -dz);
+        let delta = desiredYaw - this.yaw;
+        while (delta > Math.PI) delta -= Math.PI * 2;
+        while (delta < -Math.PI) delta += Math.PI * 2;
+        this.yaw += delta * Math.min(1, dt * 9);
+        const horizontal = Math.hypot(dx, dz);
+        this.pitch = lerp(this.pitch, Math.atan2(dy, horizontal), Math.min(1, dt * 9));
+        if (c.auto) this.firing = true;
+      } else if (c.auto) {
+        this.firing = false;
+      }
+      this.updateLockReticle(target);
+    } else {
+      this.aimTarget = null;
+      this.updateLockReticle(null);
+    }
+    if (this.cheatToastTimer > 0) {
+      this.cheatToastTimer -= dt;
+      if (this.cheatToastTimer <= 0) { const el = document.getElementById('cheat-toast'); if (el) el.classList.remove('show'); }
+    }
+  }
+
+  /** 选取最贴近当前准星的敌人（锁头 / 自动射击共用）。 */
+  pickCheatTarget(origin) {
+    const dir = this.camera.getWorldDirection(new THREE.Vector3());
+    let best = null;
+    let bestScore = Infinity;
+    for (const e of this.enemies) {
+      if (e.dead || e.phased || e.spawnTime > 0) continue;
+      const head = e.group.position.clone().add(new THREE.Vector3(0, Math.min(e.height * 0.85, e.height - 0.2), 0));
+      const to = head.clone().sub(origin);
+      const dist = to.length();
+      if (dist > 95) continue;
+      to.normalize();
+      const ang = Math.acos(clamp(dir.dot(to), -1, 1));
+      const score = ang * 28 + dist * 0.08;
+      if (score < bestScore) { bestScore = score; best = e; }
+    }
+    return best;
+  }
+
+  /** 在锁定目标头部绘制锁环准星。 */
+  updateLockReticle(target) {
+    const el = document.getElementById('lock-reticle');
+    if (!el) return;
+    if (!target) { el.classList.remove('show'); return; }
+    const head = target.group.position.clone().add(new THREE.Vector3(0, Math.min(target.height * 0.85, target.height - 0.2), 0));
+    const v = head.project(this.camera);
+    if (v.z > 1) { el.classList.remove('show'); return; }
+    el.style.left = `${(v.x * 0.5 + 0.5) * innerWidth}px`;
+    el.style.top = `${(-v.y * 0.5 + 0.5) * innerHeight}px`;
+    el.classList.add('show');
+  }
+
+  /** 清场：秒杀当前所有敌人。 */
+  cheatPurge() {
+    for (const e of this.enemies) {
+      if (e.dead || e.phased || e.spawnTime > 0) continue;
+      this.damageEnemy(e, 99999, new THREE.Vector3(0, 1, 0), { critical: true, critRoll: true });
+    }
+    this.spawnParticles(this.camera.getWorldPosition(new THREE.Vector3()), 0xff4d6d, 26, 5);
+    this.audio.explosion();
+    this.shake = Math.min(1.3, this.shake + 0.5);
+  }
+
+  /** 回满：生命 / 护盾 / 能量 / 全部武器弹药。 */
+  cheatRecharge() {
+    this.player.health = this.player.maxHealth;
+    this.player.shield = this.player.maxShield;
+    this.player.energy = this.player.energyMax;
+    for (let i = 0; i < WEAPONS.length; i++) {
+      this.weaponState[i].ammo = WEAPONS[i].magazine;
+      this.weaponState[i].reserve = WEAPONS[i].reserve;
+    }
+    this.updateHUD(true);
+  }
+
+  /** 刷新右上角“已激活作弊”徽章。 */
+  refreshCheatBadge() {
+    const el = document.getElementById('cheat-badge');
+    if (!el) return;
+    const active = Object.keys(this.cheats).filter((k) => this.cheats[k]);
+    if (active.length === 0) { el.classList.remove('show'); return; }
+    el.innerHTML = '<b>越界协议 // OVERBOUND</b>' + active.map((k) => `<span>${CHEAT_SHORT[k]}</span>`).join('');
+    el.classList.add('show');
+  }
+
+  /** 唤醒 / 关闭作弊清单面板。 */
+  toggleCheatConsole(force) {
+    const el = document.getElementById('cheat-console');
+    if (!el) return;
+    const show = force !== undefined ? force : !el.classList.contains('show');
+    el.classList.toggle('show', show);
+  }
+
+  /** 顶部作弊提示气泡。 */
+  cheatToast(msg) {
+    this.cheatToastTimer = 2.4;
+    const el = document.getElementById('cheat-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
   movePlayer(dx, dz) {
     const p = this.player.position;
     const nextX = clamp(p.x + dx, -66.5, 66.5);
@@ -1015,14 +1198,15 @@ export class Game {
     const state = this.weaponState[this.weaponIndex];
     const player = this.player;
     const overdrive = player.overdrive > 0;
-    if (state.ammo <= 0 && !overdrive) {
+    const infinite = overdrive || this.cheats.ammo;
+    if (state.ammo <= 0 && !infinite) {
       this.audio.empty();
       this.weaponCooldown = 0.25;
       this.shotThisHold = true;
       this.reload();
       return;
     }
-    if (!overdrive) state.ammo -= 1;
+    if (!infinite) state.ammo -= 1;
     this.shotsFired += 1;
     this.shotThisHold = true;
     this.weaponCooldown = 1 / (weapon.fireRate * player.fireRateMultiplier * (overdrive ? 1.6 : 1));
@@ -1477,6 +1661,7 @@ export class Game {
 
   damagePlayer(amount, source) {
     if (this.state !== 'playing' || this.player.invulnerable > 0 || this.mode === 'training') return;
+    if (this.cheats.god) return;
     this.player.lastDamage = 0;
     this.waveDamageTaken += amount;
     this.addEnergy(8);
@@ -1628,7 +1813,7 @@ export class Game {
       context.arc(center + x * scale, center + z * scale, radius, 0, Math.PI * 2);
       context.fill();
     };
-    this.enemies.forEach((enemy) => { if (!enemy.dead && !enemy.phased) plot(enemy.group.position, enemy.type === 'boss' ? '#ff9a55' : enemy.type === 'turret' ? '#ffb24d' : enemy.type === 'medic' ? '#47e0a0' : enemy.type === 'bomber' ? '#ffc24d' : enemy.type === 'phantom' ? '#5ce1ff' : enemy.type === 'falcon' ? '#c6ff3d' : '#ff5362', enemy.type === 'boss' ? 4 : 2.2); });
+    this.enemies.forEach((enemy) => { if (!enemy.dead && (!enemy.phased || this.cheats.wall)) plot(enemy.group.position, enemy.type === 'boss' ? '#ff9a55' : enemy.type === 'turret' ? '#ffb24d' : enemy.type === 'medic' ? '#47e0a0' : enemy.type === 'bomber' ? '#ffc24d' : enemy.type === 'phantom' ? '#5ce1ff' : enemy.type === 'falcon' ? '#c6ff3d' : '#ff5362', enemy.type === 'boss' ? 4 : 2.2); });
     this.pickups.forEach((pickup) => plot(pickup.group.position, '#54f7d2', 1.5));
     context.restore();
     context.fillStyle = '#a9fff0';
@@ -1662,12 +1847,14 @@ export class Game {
       this.elapsed += dt;
       this.hudTimer -= dt;
       this.radarTimer -= dt;
+      this.updateCheats(dt);
+      const cdt = this.cheats.slow ? dt * 0.4 : dt;
       this.updatePlayer(dt);
-      this.updateEnemies(dt);
-      this.updateProjectiles(dt);
-      this.updatePickups(dt);
-      this.updateEffects(dt);
-      this.updateBarrels(dt);
+      this.updateEnemies(cdt);
+      this.updateProjectiles(cdt);
+      this.updatePickups(cdt);
+      this.updateEffects(cdt);
+      this.updateBarrels(cdt);
       this.checkWave(dt);
       this.updateHUD();
       if (this.radarTimer <= 0) { this.radarTimer = 0.09; this.drawRadar(); }

@@ -93,7 +93,7 @@
         <footer class="menu-footer">
           <div class="record"><small>个人最佳纪录</small><strong id="best-score">000,000</strong><span>PTS</span></div>
           <div class="footer-line"></div>
-          <div class="system-info"><span>BUILD 5.0.0</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span><span id="device-badge">DEVICE / AUTO</span></div>
+          <div class="system-info"><span>BUILD 5.1.0</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span><span id="device-badge">DEVICE / AUTO</span></div>
           <div class="scroll-cue">系统待命 <i></i></div>
         </footer>
       </section>
@@ -124,6 +124,9 @@
         <div id="damage-numbers" class="damage-numbers"></div>
         <div id="achievement-toast" class="achievement-toast"><small>ACHIEVEMENT UNLOCKED</small><strong></strong><p></p></div>
         <div id="board-badge" class="board-badge"><span>SEEWO BOARD // 课堂模式</span><b id="board-demo-state">手动操作</b></div>
+        <div id="cheat-badge" class="cheat-badge"></div>
+        <div id="cheat-toast" class="cheat-toast"></div>
+        <div id="lock-reticle" class="lock-reticle"><i></i><i></i><i></i><i></i><b></b></div>
 
         <div id="mobile-controls" class="mobile-controls">
           <div id="move-stick" class="touch-stick"><i></i><span>移动</span></div>
@@ -138,6 +141,30 @@
             <button id="mobile-aim" class="mobile-small aim board-only" aria-label="精确瞄准">◎</button>
             <button id="mobile-demo" class="mobile-small demo board-only" aria-label="课堂演示">AUTO</button>
           </div>
+        </div>
+      </section>
+
+      <section id="cheat-console" class="screen cheat-console">
+        <div class="overlay-card cheat-card">
+          <div class="eyebrow">OVERBOUND PROTOCOL / 越界协议</div>
+          <h2>作弊码清单<span>.</span></h2>
+          <p class="modal-lead">单机训练用外挂。游戏中直接敲字母触发（大小写均可），或按 <kbd>`</kbd> / ↑↑↓↓←→←→BA 打开本清单。</p>
+          <div class="cheat-list">
+            <div class="cheat-row"><kbd>LOCKON</kbd><span>锁头 // 视线自动吸附敌人头部弱点</span></div>
+            <div class="cheat-row"><kbd>AUTOFIRE</kbd><span>自动射击 // 锁定目标后持续开火</span></div>
+            <div class="cheat-row"><kbd>GODMODE</kbd><span>无敌 // 免疫一切伤害</span></div>
+            <div class="cheat-row"><kbd>INFINITY</kbd><span>无限弹药 // 不消耗、不换弹</span></div>
+            <div class="cheat-row"><kbd>XRAY</kbd><span>透视 // 全敌人血条常显、相位敌人现形</span></div>
+            <div class="cheat-row"><kbd>TIMESLIP</kbd><span>子弹时间 // 敌人弹体减速 60%</span></div>
+            <div class="cheat-row"><kbd>PURGE</kbd><span>清场 // 秒杀当前全部敌人</span></div>
+            <div class="cheat-row"><kbd>ARSENAL</kbd><span>军械 // 解锁全部 6 把武器</span></div>
+            <div class="cheat-row"><kbd>RECHARGE</kbd><span>回满 // 生命/护盾/能量/弹药全满</span></div>
+            <div class="cheat-row"><kbd>OVERBOUND</kbd><span>协议全开 // 一键开启以上全部外挂</span></div>
+            <div class="cheat-row"><kbd>STANDDOWN</kbd><span>解除 // 关闭全部外挂</span></div>
+            <div class="cheat-row"><kbd>HELP</kbd><span>再次展开本清单</span></div>
+          </div>
+          <button id="cheat-close" class="secondary-button wide">关闭清单 <b>`</b></button>
+          <small class="cheat-foot">提示：再次输入同一密语可关闭对应外挂；OVERBOUND / STANDDOWN 为总开关。</small>
         </div>
       </section>
 

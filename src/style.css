@@ -17,6 +17,40 @@
 @media(pointer:coarse) and (orientation:portrait){.wave-info{top:57px}.wave-info>div>span{font-size:11px}#rotate-notice{display:block;position:fixed;z-index:50;bottom:7px;left:50%;transform:translateX(-50%);font-size:8px;color:#6e8d85;white-space:nowrap;pointer-events:none}.weapon-hud{bottom:225px}.hud-top-right #radar{display:none}.touch-stick{bottom:65px}.mobile-fire{bottom:145px}.mobile-small.reload{bottom:121px}.mobile-small.switch{bottom:173px}.mobile-small.dash{bottom:73px}.mobile-small.pulse{bottom:124px}.objective{display:none}}
 @media(max-width:480px){.armory-list article{grid-template-columns:1fr}.weapon-silhouette{display:none}.controls-grid{grid-template-columns:1fr}.controls-grid>div:nth-child(2){display:none}.upgrade-options{grid-template-columns:1fr;max-height:58vh;overflow:auto}.upgrade-card{min-height:150px}.upgrade-icon{height:32px}.upgrade-card>b{position:static;display:block;margin-top:12px}.upgrade-card p{margin-bottom:0}.end-stats{grid-template-columns:1fr 1fr;gap:15px}.end-stats>div+div{border-left:0}.hero-actions .secondary-button{width:48px;font-size:0;padding:0}.hero-actions .secondary-button .play-icon{font-size:18px;margin:0}}
 
+/* ===== 越界协议 // OVERBOUND 作弊 UI ===== */
+.cheat-badge{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9;display:none;gap:8px;align-items:center;padding:7px 14px;background:linear-gradient(90deg,#1a0b14ee,#2a0e22ee);border:1px solid #ff4d6d77;box-shadow:0 0 24px #ff4d6d33;font-family:'Share Tech Mono',monospace}
+.cheat-badge.show{display:flex;animation:cheatIn .3s}
+.cheat-badge b{font-size:9px;letter-spacing:2px;color:#ff7d92}
+.cheat-badge span{font-size:9px;letter-spacing:1px;color:#ffd0d8;background:#ff4d6d22;border:1px solid #ff4d6d44;padding:2px 7px}
+.cheat-toast{position:fixed;top:64px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:9;opacity:0;transition:.25s;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;color:#06110f;background:linear-gradient(90deg,#54f7d2,#7df0ff);padding:8px 18px;box-shadow:0 0 30px #54f7d266;white-space:nowrap;pointer-events:none}
+.cheat-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.lock-reticle{position:fixed;z-index:9;width:54px;height:54px;display:none;pointer-events:none;transform:translate(-50%,-50%);mix-blend-mode:screen}
+.lock-reticle.show{display:block;animation:lockPulse .6s infinite}
+.lock-reticle i{position:absolute;background:#ff4d6d;box-shadow:0 0 6px #ff4d6d}
+.lock-reticle i:nth-child(1){width:14px;height:2px;left:0;top:26px}
+.lock-reticle i:nth-child(2){width:14px;height:2px;right:0;top:26px}
+.lock-reticle i:nth-child(3){width:2px;height:14px;left:26px;top:0}
+.lock-reticle i:nth-child(4){width:2px;height:14px;left:26px;bottom:0}
+.lock-reticle b{position:absolute;inset:14px;border:1px solid #ff4d6d;border-radius:50%;opacity:.8}
+.cheat-console{background:transparent;backdrop-filter:none;pointer-events:none;align-items:flex-start;justify-content:center;padding-top:7vh}
+.cheat-console.active{pointer-events:none}
+.cheat-card{text-align:left;pointer-events:auto;width:min(580px,93vw);padding:30px 34px;background:linear-gradient(150deg,#10060c,#07030a);border:1px solid #ff4d6d55;box-shadow:0 30px 100px #000a,0 0 40px #ff4d6d22;position:relative}
+.cheat-card:before{content:'';position:absolute;left:-1px;top:-1px;width:35px;height:2px;background:#ff4d6d}
+.cheat-card:after{content:'';position:absolute;right:-1px;bottom:-1px;width:35px;height:2px;background:#ff4d6d}
+.cheat-card .eyebrow span{border-color:#ff4d6d55;color:#ff7d92}
+.cheat-card h2{font-size:30px;margin:10px 0 6px}
+.cheat-card .modal-lead{margin-bottom:20px;font-size:11px}
+.cheat-list{display:grid;gap:7px;margin-bottom:18px}
+.cheat-row{display:flex;align-items:center;gap:14px;border:1px solid #ff4d6d22;padding:8px 12px;background:#1a0b14aa}
+.cheat-row kbd{font-family:'Share Tech Mono';font-size:11px;color:#ff7d92;border-color:#ff4d6d66;min-width:96px;text-align:center}
+.cheat-row span{font-size:10px;color:#c9aeb4;line-height:1.5}
+.cheat-foot{display:block;margin-top:10px;font-size:9px;color:#a06b78}
+.cheat-card .secondary-button{border-color:#ff4d6d55;color:#ff9bb0}
+.cheat-card .secondary-button:hover{border-color:#ff4d6d;color:#fff}
+@keyframes cheatIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes lockPulse{0%,100%{opacity:.6}50%{opacity:1}}
+@media(max-width:760px){.cheat-badge{top:8px;padding:5px 10px;gap:5px}.cheat-row{flex-direction:column;align-items:flex-start;gap:4px}.cheat-row kbd{min-width:0}}
+
 /* ===== V2.0 :: difficulty selector ===== */
 .difficulty-selector{display:flex;align-items:center;gap:7px;margin:13px 0 16px;flex-wrap:wrap}
 .difficulty-label{font-size:8px;letter-spacing:2px;color:#7d9a95;margin-right:5px}
