@@ -34,13 +34,15 @@ const WEAPONS = [
   { id: 'rail', name: 'R-01 磁轨', label: 'R-01 <span>磁轨</span>', className: '磁轨精确步枪 // SEMI', damage: 135, fireRate: 0.8, magazine: 5, reserve: 25, reload: 2.1, spread: 0.001, pellets: 1, auto: false, range: 130, pierce: true },
   { id: 'arc', name: 'ARC-7 弧光', label: 'ARC-7 <span>弧光</span>', className: '链式电弧 // CHAIN', damage: 46, fireRate: 3.4, magazine: 24, reserve: 120, reload: 1.7, spread: 0.014, pellets: 1, auto: true, range: 62, chain: 3 },
   { id: 'rocket', name: 'WN-5 蜂巢', label: 'WN-5 <span>蜂巢</span>', className: '制导导弹 // HOMING', damage: 120, fireRate: 1.1, magazine: 4, reserve: 16, reload: 2.2, spread: 0, pellets: 1, auto: false, range: 130, rocket: true, aoe: 6 },
+  { id: 'frost', name: 'LN-3 寒霜', label: 'LN-3 <span>寒霜</span>', className: '低温步枪 // CRYO', damage: 30, fireRate: 4.2, magazine: 22, reserve: 110, reload: 1.6, spread: 0.012, pellets: 1, auto: true, range: 95, frost: true, slowDuration: 2.2, slowStrength: 0.5 },
 ];
 
 const ENEMY_DATA = {
   runner: { name: '猎犬突击体', health: 65, speed: 4.7, damage: 13, score: 120, radius: 0.55, color: 0xff4658 },
   drone: { name: '蜂群射手', health: 90, speed: 2.7, damage: 10, score: 180, radius: 0.65, color: 0xb367ff },
   tank: { name: '重装碾压者', health: 310, speed: 1.35, damage: 16, score: 420, radius: 0.95, color: 0xff8a3d },
-  phantom: { name: '相位幽影', health: 58, speed: 6.4, damage: 12, score: 240, radius: 0.5, color: 0x5ce1ff },
+  phantom: { name: '相位幽影', health: 58, speed: 5.6, damage: 12, score: 240, radius: 0.5, color: 0x5ce1ff },
+  falcon: { name: '游隼突袭者', health: 44, speed: 5.8, damage: 9, score: 160, radius: 0.5, color: 0xc6ff3d },
   bomber: { name: '自毁蜂群', health: 46, speed: 5.5, damage: 28, score: 210, radius: 0.52, color: 0xffc24d },
   medic: { name: '维生单元', health: 75, speed: 2.3, damage: 0, score: 200, radius: 0.6, color: 0x47e0a0 },
   turret: { name: '定点炮台', health: 240, speed: 0, damage: 14, score: 300, radius: 0.9, color: 0xffb24d },
@@ -66,6 +68,8 @@ export const ACHIEVEMENTS = [
   { id: 'hive', name: '蜂群覆盖', desc: '使用制导导弹击毁至少一个目标' },
   { id: 'medic-down', name: '断援', desc: '击毁一台维生单元' },
   { id: 'barrel', name: '连环爆破', desc: '用爆炸油桶一次清除多个目标' },
+  { id: 'frostbite', name: '冰封猎场', desc: '累计击毁 15 个处于减速状态的敌人' },
+  { id: 'falconer', name: '隼猎者', desc: '单局击毁 8 只游隼突袭者' },
 ];
 
 const UPGRADES = [
@@ -84,6 +88,8 @@ const UPGRADES = [
   { id: 'magnet', icon: '⊙', type: 'UTILITY', name: '磁场牵引', description: '拾取范围扩大 1 倍，补给效果提高 35%。', apply: (g) => { g.player.pickupRadius *= 2; g.player.pickupPower *= 1.35; } },
   { id: 'dashwave', icon: '↝', type: 'MOBILITY', name: '冲击冲刺', description: '冲刺结束时释放冲击波，对周围敌人造成 55 点伤害。', apply: (g) => { g.player.dashWave += 55; } },
   { id: 'regen', icon: '♻', type: 'SURVIVAL', name: '自适应回路', description: '护盾恢复延迟缩短 2 秒，恢复速度提高 45%。', apply: (g) => { g.player.shieldDelay = Math.max(1.5, g.player.shieldDelay - 2); g.player.shieldRegen *= 1.45; } },
+  { id: 'cryo', icon: '❄', type: 'FIREPOWER', name: '极寒增幅', description: '寒霜减速时间延长 60%，减速强度提升至 65%。', apply: (g) => { g.player.frostDuration = (g.player.frostDuration || 1) * 1.6; g.player.frostSlow = (g.player.frostSlow || 1) * 0.65; } },
+  { id: 'frostfield', icon: '✲', type: 'ABILITY', name: '冰封脉冲', description: '电磁脉冲范围内的敌人被减速 60%，持续 2.5 秒。', apply: (g) => { g.player.frostPulse = true; } },
 ];
 
 export class Game {
@@ -224,7 +230,7 @@ export class Game {
       position: new THREE.Vector3(0, 1.7, 22), velocity: new THREE.Vector3(), health: 100, maxHealth: 100, shield: 50, maxShield: 50,
       damageMultiplier: 1, fireRateMultiplier: 1, reloadMultiplier: 1, speedMultiplier: 1, ammoMultiplier: 1,
       dashCooldown: 0, dashMax: 5, dashTime: 0, invulnerable: 0, pulseCooldown: 0, pulseMax: 12, pulseRadius: 12, pulseDamage: 75,
-      shieldRegen: 8, shieldDelay: 5, lastDamage: 0, killHeal: 0,
+      shieldRegen: 9, shieldDelay: 4.5, lastDamage: 0, killHeal: 0,
       critChance: 0.08, critMultiplier: 1.75, executeBonus: 1, executeThreshold: 0.35,
       energy: 0, energyMax: 100, energyGain: 1, overdrive: 0, overdriveMax: 8,
       chainBonus: 0, chainDamage: 1, pickupRadius: 1.45, pickupPower: 1, dashWave: 0,
@@ -237,6 +243,8 @@ export class Game {
     this.switchTimer = 0;
     this.score = 0;
     this.kills = 0;
+    this.falconKills = 0;
+    this.frostKills = 0;
     this.shotsFired = 0;
     this.shotsHit = 0;
     this.combo = 1;
@@ -362,6 +370,7 @@ export class Game {
       if (event.code === 'Digit3') this.switchWeapon(2);
       if (event.code === 'Digit4') this.switchWeapon(3);
       if (event.code === 'Digit5') this.switchWeapon(4);
+      if (event.code === 'Digit6') this.switchWeapon(5);
       if (event.code === 'KeyP' || (event.code === 'Escape' && !document.pointerLockElement)) {
         if (this.state === 'playing') this.pause();
         else if (this.state === 'paused') this.resume();
@@ -520,10 +529,12 @@ export class Game {
       if (this.wave >= 3) pool.push('phantom');
       if (this.wave >= 4) pool.push('tank', 'turret');
       if (this.wave >= 5) pool.push('bomber', 'medic');
+      if (this.wave >= 6) pool.push('falcon', 'falcon');
       for (let i = 0; i < count; i++) this.spawnQueue.push(pool[Math.floor(Math.random() * pool.length)]);
       this.callbacks.onAnnounce(`第 ${String(this.wave).padStart(2, '0')} 波`, this.wave === 1 ? '敌对信号接近 · 清除所有单位' : '威胁等级上升 · 保持移动', 'HOSTILE SIGNALS DETECTED');
     }
-    if (this.wave >= 8 && this.unlockedWeapon === 3) this.unlockWeapon(4);
+    if (this.wave >= 9 && this.unlockedWeapon === 4) this.unlockWeapon(5);
+    else if (this.wave >= 8 && this.unlockedWeapon === 3) this.unlockWeapon(4);
     else if (this.wave >= 6 && this.unlockedWeapon === 2) this.unlockWeapon(3);
     else if (this.wave >= 4 && this.unlockedWeapon === 1) this.unlockWeapon(2);
     else if (this.wave >= 2 && this.unlockedWeapon === 0) this.unlockWeapon(1);
@@ -558,10 +569,10 @@ export class Game {
     const enemy = {
       type, group, material, fadeMaterials: [material, glow, dark, accent, warning],
       health: data.health * (1 + Math.max(0, this.wave - 1) * (type === 'boss' ? 0.12 : 0.085)) * diff.hp, maxHealth: 0,
-      speed: data.speed * (1 + Math.min(0.45, this.wave * 0.018)), damage: data.damage * (1 + this.wave * 0.025) * diff.damage, score: Math.round(data.score * diff.score),
+      speed: data.speed * (1 + Math.min(0.45, this.wave * 0.018)), damage: data.damage * (1 + this.wave * 0.022) * diff.damage, score: Math.round(data.score * diff.score),
       radius: data.radius, name: data.name, attackCooldown: random(0.4, 1.3), spawnTime: 0.85, dead: false, deathTimer: 0,
       strafe: Math.random() > 0.5 ? 1 : -1, phase: Math.random() * Math.PI * 2, hitTimer: 0, healthBar: null, barFill: null,
-      phased: false, phaseTimer: random(1.4, 2.8), fuse: 0, chargeTimer: 0, healTimer: 0,
+      phased: false, phaseTimer: random(1.4, 2.8), fuse: 0, chargeTimer: 0, healTimer: 0, slow: 0,
       parts: model.dynamic, height: model.height, baseY: model.baseY,
     };
     enemy.maxHealth = enemy.health;
@@ -654,11 +665,11 @@ export class Game {
       enemy.group.rotation.y = Math.atan2(toPlayer.x, toPlayer.z) + Math.PI;
       enemy.attackCooldown -= dt;
       let move = new THREE.Vector3();
-      if (enemy.type === 'runner' || enemy.type === 'phantom') {
+      if (enemy.type === 'runner' || enemy.type === 'phantom' || enemy.type === 'falcon') {
         if (distance > 1.45) move.copy(toPlayer);
         if (distance < 1.85 && enemy.attackCooldown <= 0) {
           this.damagePlayer(enemy.damage, enemy.group.position);
-          enemy.attackCooldown = enemy.type === 'phantom' ? 0.75 : 0.9;
+          enemy.attackCooldown = enemy.type === 'phantom' ? 0.85 : enemy.type === 'falcon' ? 1.1 : 1.0;
           enemy.group.position.addScaledVector(toPlayer, 0.3);
         }
       } else if (enemy.type === 'bomber') {
@@ -696,19 +707,21 @@ export class Game {
           let bestMissing = 6;
           for (const ally of this.enemies) {
             if (ally === enemy || ally.dead || ally.type === 'medic' || ally.spawnTime > 0) continue;
-            if (ally.group.position.distanceTo(enemy.group.position) > 14) continue;
+            if (ally.group.position.distanceTo(enemy.group.position) > 11) continue;
             const missing = ally.maxHealth - ally.health;
+            // 只治疗仍有明显伤势（低于 70% 生命）的友军，避免把满血敌人堆成“打不死”的墙。
+            if (ally.health > ally.maxHealth * 0.7) continue;
             if (missing > bestMissing) { bestMissing = missing; bestAlly = ally; }
           }
           if (bestAlly) {
-            bestAlly.health = Math.min(bestAlly.maxHealth, bestAlly.health + 22);
+            bestAlly.health = Math.min(bestAlly.maxHealth, bestAlly.health + 14);
             if (bestAlly.barFill && bestAlly.healthBar.visible) {
               const ratio = clamp(bestAlly.health / bestAlly.maxHealth, 0, 1);
               bestAlly.barFill.scale.x = ratio;
               bestAlly.barFill.position.x = -(1 - ratio) * (bestAlly.barHalf || 0.6);
             }
             this.createHealBeam(enemy.group.position.clone().add(new THREE.Vector3(0, 1.4, 0)), bestAlly.group.position.clone().add(new THREE.Vector3(0, (bestAlly.height || 2) * 0.55, 0)));
-            enemy.healTimer = 0.7;
+            enemy.healTimer = 0.9;
           }
         }
       } else {
@@ -741,8 +754,14 @@ export class Game {
         }
       }
       if (move.lengthSq() > 0) {
-        move.normalize().multiplyScalar(enemy.speed * dt);
+        const slowFactor = enemy.slow > 0 ? (enemy.slowMul || 0.5) : 1; // 被寒霜命中后减速
+        move.normalize().multiplyScalar(enemy.speed * slowFactor * dt);
         this.moveEnemy(enemy, move);
+      }
+      if (enemy.slow > 0) {
+        enemy.slow -= dt;
+        // 减速视觉：核心发光维持冷蓝
+        enemy.material.emissiveIntensity = Math.max(enemy.material.emissiveIntensity || 0, 1.1);
       }
       if (enemy.baseY) enemy.group.position.y = enemy.baseY + Math.sin(enemy.phase * 2.1) * 0.18;
       enemy.healthBar.quaternion.copy(this.camera.quaternion);
@@ -1063,6 +1082,11 @@ export class Game {
           const amount = weapon.damage * player.damageMultiplier * (overdrive ? 1.5 : 1) * (critical ? 1.65 : 1) * (critRoll ? player.critMultiplier : 1);
           const killed = this.damageEnemy(enemy, amount, direction, { critical: Boolean(critical || critRoll), critRoll });
           if (weapon.chain) this.chainLightning(enemy, hit.point, amount, weapon.chain + player.chainBonus, new Set(uniqueEnemies));
+          if (weapon.frost) {
+            enemy.slow = Math.max(enemy.slow || 0, weapon.slowDuration * (player.frostDuration || 1));
+            enemy.slowMul = Math.max(0.2, weapon.slowStrength * (player.frostSlow || 1));
+            this.spawnParticles(hit.point, 0x9fe8ff, 5, 1.6);
+          }
           anyKill = anyKill || killed;
           if (!weapon.pierce) {
             endpoint = hit.point;
@@ -1130,7 +1154,9 @@ export class Game {
     if (barrel.dead) return;
     barrel.dead = true;
     const center = barrel.group.position.clone();
-    this.scene.remove(barrel.group);
+    // 油桶挂在 world（scene 的子节点）下，必须用 removeFromParent 才能正确移除，
+    // 直接用 scene.remove 因父节点不是 scene 而失效，导致爆炸后油桶“不消失”。
+    barrel.group.removeFromParent();
     this.barrelMeshes = this.barrelMeshes.filter((mesh) => mesh.userData.barrel !== barrel);
     this.obstacles = this.obstacles.filter((box) => box !== barrel.box);
     this.spawnParticles(center.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xffa24a, this.isTouch ? 18 : 34, 7);
@@ -1276,6 +1302,8 @@ export class Game {
     if (this.combo >= 2.5) this.unlockAchievement('combo-master');
     if (enemy.type === 'bomber') this.unlockAchievement('defuser');
     if (enemy.type === 'medic') this.unlockAchievement('medic-down');
+    if (enemy.type === 'falcon') { this.falconKills = (this.falconKills || 0) + 1; if (this.falconKills >= 8) this.unlockAchievement('falconer'); }
+    if (enemy.slow > 0) { this.frostKills = (this.frostKills || 0) + 1; if (this.frostKills >= 15) this.unlockAchievement('frostbite'); }
     const gained = Math.floor(enemy.score * this.combo);
     this.score += gained;
     this.player.health = Math.min(this.player.maxHealth, this.player.health + this.player.killHeal);
@@ -1349,7 +1377,10 @@ export class Game {
       if (distance <= this.player.pulseRadius) {
         const direction = enemy.group.position.clone().sub(center).setY(0).normalize();
         this.damageEnemy(enemy, this.player.pulseDamage * this.player.damageMultiplier * (1 - distance / this.player.pulseRadius * 0.35), direction);
-        if (!enemy.dead) enemy.group.position.addScaledVector(direction, enemy.type === 'boss' ? 0.4 : 1.4);
+        if (!enemy.dead) {
+          enemy.group.position.addScaledVector(direction, enemy.type === 'boss' ? 0.4 : 1.4);
+          if (this.player.frostPulse) { enemy.slow = Math.max(enemy.slow || 0, 2.5); enemy.slowMul = Math.max(0.2, 0.4); }
+        }
       }
     }
   }
@@ -1597,7 +1628,7 @@ export class Game {
       context.arc(center + x * scale, center + z * scale, radius, 0, Math.PI * 2);
       context.fill();
     };
-    this.enemies.forEach((enemy) => { if (!enemy.dead && !enemy.phased) plot(enemy.group.position, enemy.type === 'boss' ? '#ff9a55' : enemy.type === 'turret' ? '#ffb24d' : enemy.type === 'medic' ? '#47e0a0' : enemy.type === 'bomber' ? '#ffc24d' : enemy.type === 'phantom' ? '#5ce1ff' : '#ff5362', enemy.type === 'boss' ? 4 : 2.2); });
+    this.enemies.forEach((enemy) => { if (!enemy.dead && !enemy.phased) plot(enemy.group.position, enemy.type === 'boss' ? '#ff9a55' : enemy.type === 'turret' ? '#ffb24d' : enemy.type === 'medic' ? '#47e0a0' : enemy.type === 'bomber' ? '#ffc24d' : enemy.type === 'phantom' ? '#5ce1ff' : enemy.type === 'falcon' ? '#c6ff3d' : '#ff5362', enemy.type === 'boss' ? 4 : 2.2); });
     this.pickups.forEach((pickup) => plot(pickup.group.position, '#54f7d2', 1.5));
     context.restore();
     context.fillStyle = '#a9fff0';

@@ -86,4 +86,5 @@
 
 /* ===== V4.0 :: WN-5 蜂巢 武器剪影（橙色调） ===== */
 .weapon-silhouette.rocket{color:#ff7a3d99;background:linear-gradient(135deg,#ff7a3d11,transparent);border-color:#ff7a3d22}
+.weapon-silhouette.frost{color:#8fe8ff99;background:linear-gradient(135deg,#8fe8ff11,transparent);border-color:#8fe8ff22}
 @media(max-width:760px){.weapon-silhouette.rocket{color:#ff7a3d99}}

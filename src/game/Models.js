@@ -90,6 +90,7 @@ const GUN_PALETTE = [
   { metal: 0x2b3f4e, dark: 0x091116, accent: 0x7ba4c2, glow: 0x69bfff },
   { metal: 0x243d43, dark: 0x081215, accent: 0x76b9c0, glow: 0x7de8ff },
   { metal: 0x3a2c20, dark: 0x140d08, accent: 0xb98a52, glow: 0xff7a3d },
+  { metal: 0x243844, dark: 0x081318, accent: 0x7fbfd6, glow: 0x8fe8ff },
 ];
 
 function gunMaterials(index) {
@@ -242,7 +243,7 @@ export function createWeaponModel(index) {
     add('glow', torus(0.065, 0.006, 4, 16), [0, 0.175, -0.18]);
     add('metal', box(0.05, 0.075, 0.05), [0, 0.115, -0.18]);
     add('glow', box(0.014, 0.014, 0.014), [0, 0.175, -0.18]);
-  } else {
+  } else if (index === 4) {
     // WN-5 蜂巢：六管制导发射器 + 瞄准镜 + 下挂握把
     add('metal', box(0.24, 0.26, 0.52), [0, 0, -0.1]);
     add('dark', box(0.28, 0.32, 0.34), [0, -0.04, 0.06]);
@@ -265,6 +266,26 @@ export function createWeaponModel(index) {
     add('dark', box(0.1, 0.22, 0.12), [0, -0.24, 0.08]);
     add('accent', box(0.15, 0.02, 0.2), [0, -0.12, -0.02]);
     for (let i = 0; i < 3; i++) add('dark', box(0.012, 0.18, 0.04), [-0.12 + i * 0.12, -0.02, -0.28]);
+  } else {
+    // LN-3 寒霜：低温步枪 —— 细长枪管 + 冰晶枪口 + 侧置冷凝罐 + 散热鳍
+    add('metal', box(0.18, 0.2, 0.5), [0, 0, -0.12]);
+    add('accent', box(0.2, 0.045, 0.42), [0, 0.11, -0.1]);
+    add('dark', box(0.155, 0.1, 0.22), [0, -0.07, 0.02]);
+    // 细长枪管
+    add('dark', cyl(0.045, 0.05, 0.78, 10), [0, 0.015, -0.74], [Math.PI / 2, 0, 0]);
+    // 枪口冰晶（多层八面体，冷蓝发光）
+    add('glass', new THREE.OctahedronGeometry(0.085, 0), [0, 0.015, -1.16]);
+    add('glow', new THREE.OctahedronGeometry(0.05, 0), [0, 0.015, -1.16]);
+    add('glow', torus(0.075, 0.01, 4, 16), [0, 0.015, -1.12], [Math.PI / 2, 0, 0]);
+    // 侧置冷凝罐
+    add('dark', cyl(0.07, 0.07, 0.34, 12), [0.16, -0.02, 0.0], [0, 0, Math.PI / 2]);
+    add('accent', cyl(0.05, 0.05, 0.12, 12), [0.16, -0.02, -0.2], [0, 0, Math.PI / 2]);
+    add('glow', cyl(0.025, 0.025, 0.18, 10), [0.16, -0.02, 0.06], [0, 0, Math.PI / 2]);
+    // 散热鳍
+    for (let i = 0; i < 4; i++) add('metal', box(0.01, 0.16, 0.05), [-0.1 + i * 0.066, 0.0, -0.34]);
+    // 顶部瞄具
+    add('metal', box(0.05, 0.07, 0.18), [0, 0.14, -0.18]);
+    add('glow', box(0.014, 0.014, 0.014), [0, 0.14, -0.18]);
   }
 
   commonFurniture(b, index);
@@ -294,7 +315,7 @@ export function createWeaponModel(index) {
   flashCore.rotation.x = -Math.PI / 2;
   const flashRing = new THREE.Mesh(torus(0.1, 0.018, 5, 14), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
   flash.add(flashCore, flashRing);
-  const muzzleZ = index === 4 ? -1.02 : index === 2 ? -1.44 : index === 1 ? -1.14 : index === 3 ? -1.22 : -1.12;
+  const muzzleZ = index === 5 ? -1.14 : index === 4 ? -1.02 : index === 2 ? -1.44 : index === 1 ? -1.14 : index === 3 ? -1.22 : -1.12;
   flash.position.set(0, 0.015, muzzleZ - 0.1);
   flash.visible = false;
   group.add(flash);
@@ -562,6 +583,32 @@ export function buildEnemyModel(type, mats) {
     add('accent', cyl(0.13, 0.13, 0.42, 8), [0, 1.72, 0]);
     weak(ico(0.16, 0), [0, 1.18, -0.5]);
     add('warning', sph(0.1, 8, 6), [0, 1.98, 0]);
+  } else if (type === 'falcon') {
+    // 游隼突袭者：后掠翼快速飞行单位，低血量、悬停、弱接触伤害
+    height = 1.9; baseY = 1.35;
+    add('body', new THREE.ConeGeometry(0.32, 1.5, 10), [0, 1.2, 0], [Math.PI / 2, 0, 0]); // 头部朝前
+    add('dark', box(0.34, 0.3, 0.7), [0, 1.2, 0.1]);
+    add('accent', box(0.3, 0.06, 0.5), [0, 1.32, 0.05]);
+    weak(sph(0.13, 10, 8), [0, 1.2, -0.4]);            // 核心（后部）
+    add('glow', new THREE.OctahedronGeometry(0.1, 0), [0, 1.2, -0.55]); // 推进核心
+    add('warning', box(0.16, 0.12, 0.06), [0, 1.26, 0.62]);  // 前视眼
+    // 后掠翼（左右各一，可微动）
+    for (const side of [-1, 1]) {
+      const wing = new THREE.Group();
+      wing.position.set(side * 0.22, 1.18, -0.05);
+      const plate = new THREE.Mesh(box(0.9, 0.05, 0.34), mats.accent);
+      plate.position.set(side * 0.45, 0, -0.1);
+      plate.rotation.y = side * 0.5;
+      const tip = new THREE.Mesh(box(0.16, 0.03, 0.2), mats.glow);
+      tip.position.set(side * 0.92, 0, -0.22);
+      tip.rotation.y = side * 0.5;
+      wing.add(plate, tip);
+      dynamic.wings.push(wing);
+      extraMeshes.push(wing);
+    }
+    // 尾部立鳍
+    add('dark', box(0.04, 0.4, 0.28), [0, 1.42, -0.5]);
+    add('glow', box(0.02, 0.22, 0.16), [0, 1.4, -0.52]);
   } else {
     // boss 守望者核心
     height = 5.6; baseY = 0.4;
