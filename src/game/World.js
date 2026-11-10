@@ -221,6 +221,35 @@ export function buildWorld(game) {
     game.worldColliders.push(mesh);
   });
 
+  // —— 可破坏油桶：被击中会爆炸并连锁引爆邻近油桶 ——
+  const barrelPositions = [[-20, 8], [20, -8], [-8, -20], [8, 20], [-25, 25], [25, -25], [16, 16], [-16, -16]];
+  const barrelBaseMaterial = new THREE.MeshStandardMaterial({ color: 0x6a4a1c, metalness: 0.7, roughness: 0.5, emissive: 0xff7a2d, emissiveIntensity: 0.5 });
+  const barrelStripe = new THREE.MeshStandardMaterial({ color: 0x14100a, metalness: 0.6, roughness: 0.6 });
+  const barrelGlow = new THREE.MeshBasicMaterial({ color: 0xffb24a, toneMapped: false });
+  barrelPositions.forEach(([x, z]) => {
+    const group = new THREE.Group();
+    const bodyMaterial = barrelBaseMaterial.clone();
+    const body = new THREE.Mesh(cyl(0.62, 0.62, 1.5, 14), bodyMaterial);
+    body.position.y = 0.75;
+    body.castShadow = !lowPower;
+    const top = new THREE.Mesh(cyl(0.66, 0.62, 0.12, 14), barrelStripe);
+    top.position.y = 1.5;
+    const stripe = new THREE.Mesh(cyl(0.64, 0.64, 0.3, 14), barrelStripe);
+    stripe.position.y = 0.78;
+    const lamp = new THREE.Mesh(sph(0.1, 8, 6), barrelGlow);
+    lamp.position.y = 1.62;
+    group.add(body, top, stripe, lamp);
+    group.position.set(x, 0, z);
+    world.add(group);
+    const box = { minX: x - 0.62, maxX: x + 0.62, minZ: z - 0.62, maxZ: z + 0.62 };
+    const barrel = { group, mesh: body, bodyMaterial, health: 60, maxHealth: 60, position: group.position, dead: false, flash: 0, box };
+    body.userData.barrel = barrel;
+    game.barrels.push(barrel);
+    game.barrelMeshes.push(body);
+    game.obstacles.push(box);
+    game.barrelBoxes.add(box);
+  });
+
   // —— 竞技场围墙 ——
   const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x0b1519, metalness: 0.78, roughness: 0.48 });
   [[0, -70, 142, 2], [0, 70, 142, 2], [-70, 0, 2, 142], [70, 0, 2, 142]].forEach(([x, z, w, d]) => {

@@ -83,3 +83,7 @@
 @media(max-width:760px){.difficulty-selector{gap:5px;margin:10px 0 12px}.difficulty-label{display:none}.difficulty-chip{padding:6px 8px;font-size:9px}.career-grid{grid-template-columns:repeat(2,1fr)}.achievement-list{grid-template-columns:1fr}.pause-build{max-height:120px}.achievement-toast{top:17%;padding:9px 12px}.achievement-toast strong{font-size:14px}.damage-number{font-size:14px}.damage-number.critical{font-size:18px}}
 @media(pointer:coarse){.energy-block{left:14px;bottom:150px;width:150px}.energy-head{font-size:7px}.energy-head kbd{display:none}}
 @media(pointer:coarse) and (orientation:portrait){.energy-block{bottom:205px;width:125px}.mobile-small.overdrive{bottom:175px}.achievement-toast{top:20%}}
+
+/* ===== V4.0 :: WN-5 蜂巢 武器剪影（橙色调） ===== */
+.weapon-silhouette.rocket{color:#ff7a3d99;background:linear-gradient(135deg,#ff7a3d11,transparent);border-color:#ff7a3d22}
+@media(max-width:760px){.weapon-silhouette.rocket{color:#ff7a3d99}}

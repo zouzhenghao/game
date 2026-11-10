@@ -89,6 +89,7 @@ const GUN_PALETTE = [
   { metal: 0x3c3128, dark: 0x14100d, accent: 0x9a7854, glow: 0xffa34d },
   { metal: 0x2b3f4e, dark: 0x091116, accent: 0x7ba4c2, glow: 0x69bfff },
   { metal: 0x243d43, dark: 0x081215, accent: 0x76b9c0, glow: 0x7de8ff },
+  { metal: 0x3a2c20, dark: 0x140d08, accent: 0xb98a52, glow: 0xff7a3d },
 ];
 
 function gunMaterials(index) {
@@ -218,7 +219,7 @@ export function createWeaponModel(index) {
     add('metal', box(0.045, 0.06, 0.055), [0, 0.15, -0.28]);
     add('metal', box(0.045, 0.06, 0.055), [0, 0.15, -0.02]);
     add('glow', box(0.02, 0.012, 0.02), [0, 0.255, 0.0]);
-  } else {
+  } else if (index === 3) {
     // ARC-7 弧光：特斯拉线圈 + 电容翼 + 悬浮晶体
     add('metal', box(0.205, 0.2, 0.62), [0, 0, -0.12]);
     add('accent', box(0.215, 0.045, 0.5), [0, 0.12, -0.14]);
@@ -241,6 +242,29 @@ export function createWeaponModel(index) {
     add('glow', torus(0.065, 0.006, 4, 16), [0, 0.175, -0.18]);
     add('metal', box(0.05, 0.075, 0.05), [0, 0.115, -0.18]);
     add('glow', box(0.014, 0.014, 0.014), [0, 0.175, -0.18]);
+  } else {
+    // WN-5 蜂巢：六管制导发射器 + 瞄准镜 + 下挂握把
+    add('metal', box(0.24, 0.26, 0.52), [0, 0, -0.1]);
+    add('dark', box(0.28, 0.32, 0.34), [0, -0.04, 0.06]);
+    add('accent', box(0.22, 0.05, 0.5), [0, 0.13, -0.12]);
+    // 六根发射管（2×3 蜂巢）
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 3; col++) {
+        const x = (col - 1) * 0.072;
+        const y = row ? -0.062 : 0.062;
+        add('dark', cyl(0.034, 0.034, 0.66, 8), [x, y, -0.64], [Math.PI / 2, 0, 0]);
+        add('accent', torus(0.036, 0.009, 4, 12), [x, y, -0.34], [Math.PI / 2, 0, 0]);
+        add('glow', cyl(0.024, 0.024, 0.02, 8), [x, y, -0.97], [Math.PI / 2, 0, 0]);
+      }
+    }
+    // 顶部火控镜 + 锁定环
+    add('dark', box(0.13, 0.13, 0.24), [0, 0.19, -0.04]);
+    add('glass', sph(0.055, 10, 8), [0, 0.19, -0.2]);
+    add('glow', torus(0.058, 0.008, 4, 14), [0, 0.19, -0.21]);
+    // 下挂握把 + 散热鳍
+    add('dark', box(0.1, 0.22, 0.12), [0, -0.24, 0.08]);
+    add('accent', box(0.15, 0.02, 0.2), [0, -0.12, -0.02]);
+    for (let i = 0; i < 3; i++) add('dark', box(0.012, 0.18, 0.04), [-0.12 + i * 0.12, -0.02, -0.28]);
   }
 
   commonFurniture(b, index);
@@ -270,7 +294,7 @@ export function createWeaponModel(index) {
   flashCore.rotation.x = -Math.PI / 2;
   const flashRing = new THREE.Mesh(torus(0.1, 0.018, 5, 14), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
   flash.add(flashCore, flashRing);
-  const muzzleZ = index === 2 ? -1.44 : index === 1 ? -1.14 : index === 3 ? -1.22 : -1.12;
+  const muzzleZ = index === 4 ? -1.02 : index === 2 ? -1.44 : index === 1 ? -1.14 : index === 3 ? -1.22 : -1.12;
   flash.position.set(0, 0.015, muzzleZ - 0.1);
   flash.visible = false;
   group.add(flash);
@@ -491,6 +515,53 @@ export function buildEnemyModel(type, mats) {
       dynamic.wings.push(wing);
       extraMeshes.push(wing);
     }
+  } else if (type === 'medic') {
+    height = 2.4; baseY = 1.25;
+    add('body', sph(0.5, 14, 10), [0, 1.3, 0]);
+    add('dark', box(0.9, 0.12, 0.9), [0, 0.92, 0]);
+    add('accent', box(0.66, 0.05, 0.66), [0, 0.86, 0]);
+    add('dark', torus(0.56, 0.05, 6, 22), [0, 1.0, 0], [Math.PI / 2, 0, 0]);
+    // 医疗十字标识
+    add('accent', box(0.52, 0.17, 0.06), [0, 1.3, -0.47]);
+    add('accent', box(0.17, 0.52, 0.06), [0, 1.3, -0.47]);
+    add('glow', box(0.14, 0.14, 0.1), [0, 1.3, -0.51]);           // 脉冲核心
+    for (const side of [-1, 1]) add('body', box(0.14, 0.5, 0.14), [side * 0.52, 1.08, 0]);
+    add('accent', box(0.2, 0.04, 0.2), [0, 1.62, 0]);
+    weak(sph(0.17, 10, 8), [0, 1.3, -0.5]);
+    const ring = new THREE.Mesh(torus(0.72, 0.03, 5, 26), mats.glow);
+    ring.position.y = 1.3;
+    ring.rotation.x = Math.PI / 2;
+    dynamic.rings.push(ring);
+    extraMeshes.push(ring);
+    dynamic.core = weak(sph(0.12, 10, 8), [0, 1.62, 0]);
+  } else if (type === 'turret') {
+    height = 2.3; baseY = 0;
+    add('body', cyl(0.86, 1.02, 0.7, 14), [0, 0.35, 0]);
+    add('dark', cyl(0.96, 0.96, 0.16, 14), [0, 0.72, 0]);
+    add('accent', torus(0.9, 0.05, 6, 30), [0, 0.82, 0], [Math.PI / 2, 0, 0]);
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * Math.PI * 2;
+      add('dark', box(0.26, 0.02, 0.06), [Math.cos(a) * 0.97, 0.74, Math.sin(a) * 0.97], [0, -a, 0]);
+    }
+    for (const side of [-1, 1]) add('dark', box(0.18, 0.55, 0.18), [side * 0.66, 0.2, 0]);
+    // 旋转扫描头（作为整体朝向玩家）
+    const head = new THREE.Group();
+    head.position.y = 1.18;
+    const dome = new THREE.Mesh(sph(0.55, 16, 12), mats.dark);
+    const eye = new THREE.Mesh(box(0.42, 0.2, 0.12), mats.warning);
+    eye.position.set(0, 0.02, -0.5);
+    const barrel = new THREE.Mesh(box(0.2, 0.2, 0.9), mats.body);
+    barrel.position.set(0, 0.02, -0.62);
+    const tip = new THREE.Mesh(box(0.13, 0.13, 0.06), mats.glow);
+    tip.position.set(0, 0.02, -1.08);
+    const ringSide = new THREE.Mesh(torus(0.5, 0.03, 5, 22), mats.glow);
+    ringSide.position.y = 0.02;
+    ringSide.rotation.x = Math.PI / 2;
+    head.add(dome, eye, barrel, tip, ringSide);
+    extraMeshes.push(head);
+    add('accent', cyl(0.13, 0.13, 0.42, 8), [0, 1.72, 0]);
+    weak(ico(0.16, 0), [0, 1.18, -0.5]);
+    add('warning', sph(0.1, 8, 6), [0, 1.98, 0]);
   } else {
     // boss 守望者核心
     height = 5.6; baseY = 0.4;

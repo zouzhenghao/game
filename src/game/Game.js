@@ -33,6 +33,7 @@ const WEAPONS = [
   { id: 'shotgun', name: 'SG-12 裂解', label: 'SG-12 <span>裂解</span>', className: '战术霰弹枪 // PUMP', damage: 14, fireRate: 1.2, magazine: 6, reserve: 42, reload: 1.8, spread: 0.065, pellets: 8, auto: false, range: 42 },
   { id: 'rail', name: 'R-01 磁轨', label: 'R-01 <span>磁轨</span>', className: '磁轨精确步枪 // SEMI', damage: 135, fireRate: 0.8, magazine: 5, reserve: 25, reload: 2.1, spread: 0.001, pellets: 1, auto: false, range: 130, pierce: true },
   { id: 'arc', name: 'ARC-7 弧光', label: 'ARC-7 <span>弧光</span>', className: '链式电弧 // CHAIN', damage: 46, fireRate: 3.4, magazine: 24, reserve: 120, reload: 1.7, spread: 0.014, pellets: 1, auto: true, range: 62, chain: 3 },
+  { id: 'rocket', name: 'WN-5 蜂巢', label: 'WN-5 <span>蜂巢</span>', className: '制导导弹 // HOMING', damage: 120, fireRate: 1.1, magazine: 4, reserve: 16, reload: 2.2, spread: 0, pellets: 1, auto: false, range: 130, rocket: true, aoe: 6 },
 ];
 
 const ENEMY_DATA = {
@@ -41,6 +42,8 @@ const ENEMY_DATA = {
   tank: { name: '重装碾压者', health: 310, speed: 1.35, damage: 16, score: 420, radius: 0.95, color: 0xff8a3d },
   phantom: { name: '相位幽影', health: 58, speed: 6.4, damage: 12, score: 240, radius: 0.5, color: 0x5ce1ff },
   bomber: { name: '自毁蜂群', health: 46, speed: 5.5, damage: 28, score: 210, radius: 0.52, color: 0xffc24d },
+  medic: { name: '维生单元', health: 75, speed: 2.3, damage: 0, score: 200, radius: 0.6, color: 0x47e0a0 },
+  turret: { name: '定点炮台', health: 240, speed: 0, damage: 14, score: 300, radius: 0.9, color: 0xffb24d },
   boss: { name: '守望者核心', health: 2600, speed: 1.45, damage: 18, score: 5000, radius: 2.1, color: 0xff593d },
 };
 
@@ -60,6 +63,9 @@ export const ACHIEVEMENTS = [
   { id: 'arc-chain', name: '雷霆万钧', desc: '弧光一次连锁 3 个以上目标' },
   { id: 'victory', name: '黎明已至', desc: '完成核心行动' },
   { id: 'nightmare', name: '噩梦终结', desc: '在噩梦难度下通关' },
+  { id: 'hive', name: '蜂群覆盖', desc: '使用制导导弹击毁至少一个目标' },
+  { id: 'medic-down', name: '断援', desc: '击毁一台维生单元' },
+  { id: 'barrel', name: '连环爆破', desc: '用爆炸油桶一次清除多个目标' },
 ];
 
 const UPGRADES = [
@@ -126,6 +132,9 @@ export class Game {
     this.tracers = [];
     this.effects = [];
     this.obstacles = [];
+    this.barrels = [];
+    this.barrelMeshes = [];
+    this.barrelBoxes = new Set();
     this.worldColliders = [];
     this.animatedWorld = [];
     this.spawnQueue = [];
@@ -261,6 +270,18 @@ export class Game {
     this.tracers = [];
     this.effects = [];
     this.spawnQueue = [];
+    // 油桶属于场景固定物：重开时复活而非删除，并重建派生数组。
+    this.obstacles = this.obstacles.filter((box) => !this.barrelBoxes.has(box));
+    this.barrelMeshes = [];
+    this.barrels.forEach((barrel) => {
+      barrel.dead = false;
+      barrel.health = barrel.maxHealth;
+      barrel.flash = 0;
+      if (barrel.bodyMaterial) barrel.bodyMaterial.emissiveIntensity = 0.5;
+      if (barrel.group && !barrel.group.parent) this.world.add(barrel.group);
+      this.barrelMeshes.push(barrel.mesh);
+      this.obstacles.push(barrel.box);
+    });
   }
 
   start(mode = 'campaign', difficultyId = 'standard') {
@@ -340,6 +361,7 @@ export class Game {
       if (event.code === 'Digit2') this.switchWeapon(1);
       if (event.code === 'Digit3') this.switchWeapon(2);
       if (event.code === 'Digit4') this.switchWeapon(3);
+      if (event.code === 'Digit5') this.switchWeapon(4);
       if (event.code === 'KeyP' || (event.code === 'Escape' && !document.pointerLockElement)) {
         if (this.state === 'playing') this.pause();
         else if (this.state === 'paused') this.resume();
@@ -487,7 +509,7 @@ export class Game {
     if (campaignBoss || endlessBoss) {
       this.spawnQueue.push('boss');
       const minions = Math.min(10, Math.ceil((2 + Math.floor(this.wave / 2)) * diff.spawn));
-      const escort = ['runner', 'drone', 'phantom', 'bomber', 'tank'];
+      const escort = ['runner', 'drone', 'phantom', 'bomber', 'tank', 'turret', 'medic'];
       for (let i = 0; i < minions; i++) this.spawnQueue.push(escort[Math.floor(Math.random() * escort.length)]);
       this.callbacks.onAnnounce('守望者降临', '摧毁核心装甲 · 注意范围攻击与自毁单位', 'WARNING / APEX SIGNAL', 3200);
     } else {
@@ -496,12 +518,13 @@ export class Game {
       const pool = ['runner'];
       if (this.wave >= 2) pool.push('drone', 'drone');
       if (this.wave >= 3) pool.push('phantom');
-      if (this.wave >= 4) pool.push('tank');
-      if (this.wave >= 5) pool.push('bomber');
+      if (this.wave >= 4) pool.push('tank', 'turret');
+      if (this.wave >= 5) pool.push('bomber', 'medic');
       for (let i = 0; i < count; i++) this.spawnQueue.push(pool[Math.floor(Math.random() * pool.length)]);
       this.callbacks.onAnnounce(`第 ${String(this.wave).padStart(2, '0')} 波`, this.wave === 1 ? '敌对信号接近 · 清除所有单位' : '威胁等级上升 · 保持移动', 'HOSTILE SIGNALS DETECTED');
     }
-    if (this.wave >= 6 && this.unlockedWeapon === 2) this.unlockWeapon(3);
+    if (this.wave >= 8 && this.unlockedWeapon === 3) this.unlockWeapon(4);
+    else if (this.wave >= 6 && this.unlockedWeapon === 2) this.unlockWeapon(3);
     else if (this.wave >= 4 && this.unlockedWeapon === 1) this.unlockWeapon(2);
     else if (this.wave >= 2 && this.unlockedWeapon === 0) this.unlockWeapon(1);
     this.spawnTimer = 0.4;
@@ -538,7 +561,7 @@ export class Game {
       speed: data.speed * (1 + Math.min(0.45, this.wave * 0.018)), damage: data.damage * (1 + this.wave * 0.025) * diff.damage, score: Math.round(data.score * diff.score),
       radius: data.radius, name: data.name, attackCooldown: random(0.4, 1.3), spawnTime: 0.85, dead: false, deathTimer: 0,
       strafe: Math.random() > 0.5 ? 1 : -1, phase: Math.random() * Math.PI * 2, hitTimer: 0, healthBar: null, barFill: null,
-      phased: false, phaseTimer: random(1.4, 2.8), fuse: 0,
+      phased: false, phaseTimer: random(1.4, 2.8), fuse: 0, chargeTimer: 0, healTimer: 0,
       parts: model.dynamic, height: model.height, baseY: model.baseY,
     };
     enemy.maxHealth = enemy.health;
@@ -647,6 +670,47 @@ export class Game {
             this.createPulseEffect(enemy.group.position.clone(), 0xffb347, 4.5);
           }
         }
+      } else if (enemy.type === 'turret') {
+        // 定点炮台：原地不动，充能后发射精准炮弹（带预警闪烁）
+        if (enemy.chargeTimer > 0) {
+          enemy.chargeTimer -= dt;
+          enemy.material.emissiveIntensity = 2 + Math.sin(enemy.phase * 30) * 1.4;
+          if (enemy.chargeTimer <= 0) {
+            [-0.05, 0.05].forEach((spread) => this.fireEnemyProjectile(enemy, spread, 24, enemy.damage));
+            enemy.attackCooldown = 2.4;
+            this.audio.enemyShot();
+          }
+        } else if (distance < 46 && enemy.attackCooldown <= 0) {
+          enemy.chargeTimer = 0.65;
+        }
+      } else if (enemy.type === 'medic') {
+        // 维生单元：悬浮，为附近受损友军持续修复（带修复光束）
+        enemy.healTimer -= dt;
+        const desired = 15;
+        if (distance > desired + 4) move.copy(toPlayer);
+        else if (distance < desired - 4) move.copy(toPlayer).multiplyScalar(-0.7);
+        const side = new THREE.Vector3(-toPlayer.z, 0, toPlayer.x).multiplyScalar(enemy.strafe * 0.5);
+        move.add(side);
+        if (enemy.healTimer <= 0) {
+          let bestAlly = null;
+          let bestMissing = 6;
+          for (const ally of this.enemies) {
+            if (ally === enemy || ally.dead || ally.type === 'medic' || ally.spawnTime > 0) continue;
+            if (ally.group.position.distanceTo(enemy.group.position) > 14) continue;
+            const missing = ally.maxHealth - ally.health;
+            if (missing > bestMissing) { bestMissing = missing; bestAlly = ally; }
+          }
+          if (bestAlly) {
+            bestAlly.health = Math.min(bestAlly.maxHealth, bestAlly.health + 22);
+            if (bestAlly.barFill && bestAlly.healthBar.visible) {
+              const ratio = clamp(bestAlly.health / bestAlly.maxHealth, 0, 1);
+              bestAlly.barFill.scale.x = ratio;
+              bestAlly.barFill.position.x = -(1 - ratio) * (bestAlly.barHalf || 0.6);
+            }
+            this.createHealBeam(enemy.group.position.clone().add(new THREE.Vector3(0, 1.4, 0)), bestAlly.group.position.clone().add(new THREE.Vector3(0, (bestAlly.height || 2) * 0.55, 0)));
+            enemy.healTimer = 0.7;
+          }
+        }
       } else {
         const desired = enemy.type === 'drone' ? 13 : enemy.type === 'tank' ? 17 : 20;
         if (distance > desired + 3) move.copy(toPlayer);
@@ -656,6 +720,12 @@ export class Game {
         if (distance < (enemy.type === 'boss' ? 48 : 36) && enemy.attackCooldown <= 0) {
           if (enemy.type === 'boss') {
             const enraged = enemy.health < enemy.maxHealth * 0.5;
+            if (enraged && !enemy.enragedSpawned) {
+              enemy.enragedSpawned = true;
+              this.spawnEnemy('medic');
+              this.spawnEnemy('medic');
+              this.callbacks.onAnnounce('核心过载', '守望者召唤维生单元支援', 'WARNING / REINFORCEMENTS', 2200);
+            }
             for (let i = -2; i <= 2; i++) this.fireEnemyProjectile(enemy, i * 0.105, 17, enemy.damage);
             if (enraged || Math.random() > 0.45) {
               for (let i = 0; i < 10; i++) this.fireEnemyProjectile(enemy, i / 10 * Math.PI * 2, 10, enemy.damage * 0.65, true);
@@ -733,6 +803,9 @@ export class Game {
         this.damageEnemy(enemy, player.dashWave * player.damageMultiplier, enemy.group.position.clone().sub(center).setY(0).normalize());
       }
     }
+    for (const barrel of this.barrels) {
+      if (!barrel.dead && barrel.group.position.distanceTo(center) < 5.5) this.damageBarrel(barrel, 60, new THREE.Vector3());
+    }
   }
 
   moveEnemy(enemy, movement) {
@@ -765,6 +838,35 @@ export class Game {
   updateProjectiles(dt) {
     for (const projectile of this.projectiles) {
       projectile.life -= dt;
+      if (projectile.homing) {
+        let target = null;
+        let bestDistance = 46;
+        for (const enemy of this.enemies) {
+          if (enemy.dead || enemy.phased || enemy.spawnTime > 0) continue;
+          const distance = enemy.group.position.distanceTo(projectile.mesh.position);
+          if (distance < bestDistance) { bestDistance = distance; target = enemy; }
+        }
+        if (target) {
+          const desired = target.group.position.clone().add(new THREE.Vector3(0, (target.height || 2) * 0.5, 0))
+            .sub(projectile.mesh.position).normalize().multiplyScalar(projectile.velocity.length());
+          projectile.velocity.lerp(desired, Math.min(1, dt * 3.4));
+        }
+        projectile.mesh.position.addScaledVector(projectile.velocity, dt);
+        projectile.mesh.rotation.x += dt * 14;
+        let struck = null;
+        for (const enemy of this.enemies) {
+          if (enemy.dead || enemy.phased) continue;
+          if (enemy.group.position.distanceTo(projectile.mesh.position) < enemy.radius + 0.9) { struck = enemy; break; }
+        }
+        const hitWall = this.collides(projectile.mesh.position.x, projectile.mesh.position.z, 0.2)
+          || Math.abs(projectile.mesh.position.x) > 70 || Math.abs(projectile.mesh.position.z) > 70;
+        if (struck || hitWall || projectile.life <= 0) {
+          this.explodeRocket(projectile);
+          projectile.life = 0;
+        }
+        if (projectile.life <= 0) { this.scene.remove(projectile.mesh); projectile.remove = true; }
+        continue;
+      }
       projectile.mesh.position.addScaledVector(projectile.velocity, dt);
       projectile.mesh.rotation.x += dt * 8;
       const position = projectile.mesh.position;
@@ -907,6 +1009,11 @@ export class Game {
     this.weaponCooldown = 1 / (weapon.fireRate * player.fireRateMultiplier * (overdrive ? 1.6 : 1));
     this.weaponRecoil = Math.min(1.5, this.weaponRecoil + (weapon.id === 'shotgun' ? 1 : weapon.id === 'rail' ? 1.25 : weapon.id === 'arc' ? 0.45 : 0.32));
     this.pitch = clamp(this.pitch + (weapon.id === 'shotgun' ? 0.025 : weapon.id === 'rail' ? 0.018 : 0.004), -1.45, 1.45);
+    if (weapon.rocket) {
+      this.audio.shot('rocket');
+      this.fireRocket(baseDirection, weapon.damage * this.player.damageMultiplier * (overdrive ? 1.5 : 1));
+      return;
+    }
     this.muzzleTimer = 0.055;
     this.audio.shot(weapon.id);
     const origin = this.camera.getWorldPosition(new THREE.Vector3());
@@ -932,9 +1039,19 @@ export class Game {
         const target = hit.object.userData.enemy;
         return target && !target.dead && !target.phased && hit.distance < wallDistance;
       });
+      const barrelHits = this.raycaster.intersectObjects(this.barrelMeshes, false).filter((hit) => {
+        const barrel = hit.object.userData.barrel;
+        return barrel && !barrel.dead && hit.distance < wallDistance;
+      });
+      const enemyDist = hits.length ? hits[0].distance : Infinity;
+      const barrelDist = barrelHits.length ? barrelHits[0].distance : Infinity;
       let endpoint = origin.clone().addScaledVector(direction, wallDistance);
       if (wallHits.length) endpoint = wallHits[0].point;
-      if (hits.length) {
+      if (barrelDist < wallDistance && barrelDist <= enemyDist) {
+        endpoint = barrelHits[0].point;
+        this.damageBarrel(barrelHits[0].object.userData.barrel, weapon.damage * this.player.damageMultiplier * (overdrive ? 1.5 : 1), direction);
+        this.spawnParticles(endpoint, 0xffa24a, 3, 1.3);
+      } else if (hits.length) {
         anyHit = true;
         const uniqueEnemies = [];
         for (const hit of hits) {
@@ -963,6 +1080,92 @@ export class Game {
       this.addEnergy(1.4);
       this.audio.hit();
       this.callbacks.onHit(anyKill);
+    }
+  }
+
+  /** 发射制导导弹：自动追踪最近敌人，命中或触障后范围爆炸。 */
+  fireRocket(direction, damage) {
+    const origin = this.camera.getWorldPosition(new THREE.Vector3()).addScaledVector(direction, 1.0);
+    const mesh = new THREE.Mesh(this.sharedProjectileGeometry, new THREE.MeshBasicMaterial({ color: 0xff8a3d, toneMapped: false }));
+    mesh.scale.setScalar(1.9);
+    mesh.position.copy(origin);
+    this.scene.add(mesh);
+    this.projectiles.push({
+      mesh, velocity: direction.clone().multiplyScalar(36), damage, aoe: WEAPONS[4].aoe,
+      life: 4.5, homing: true, rocket: true, source: origin.clone(),
+    });
+  }
+
+  explodeRocket(projectile) {
+    const center = projectile.mesh.position.clone();
+    this.scene.remove(projectile.mesh);
+    const aoe = projectile.aoe;
+    this.spawnParticles(center, 0xff7a3d, this.isTouch ? 16 : 30, 6);
+    this.createPulseEffect(center, 0xff8a3d, aoe);
+    this.audio.explosion();
+    this.shake = Math.min(1.3, this.shake + 0.4);
+    let kills = 0;
+    for (const enemy of this.enemies) {
+      if (enemy.dead || enemy.phased) continue;
+      const distance = enemy.group.position.distanceTo(center);
+      if (distance < aoe + enemy.radius) {
+        if (this.damageEnemy(enemy, projectile.damage * (1 - distance / (aoe + enemy.radius) * 0.4), center.clone().sub(enemy.group.position).setY(0).normalize())) kills += 1;
+      }
+    }
+    for (const barrel of this.barrels) {
+      if (!barrel.dead && barrel.group.position.distanceTo(center) < aoe + 1) this.damageBarrel(barrel, 999, new THREE.Vector3());
+    }
+    if (kills > 0) this.unlockAchievement('hive');
+  }
+
+  damageBarrel(barrel, amount, direction) {
+    if (barrel.dead) return;
+    barrel.health -= amount;
+    if (barrel.health <= 0) { this.explodeBarrel(barrel); return; }
+    barrel.flash = 0.12;
+    if (barrel.bodyMaterial) barrel.bodyMaterial.emissiveIntensity = 2.4;
+  }
+
+  explodeBarrel(barrel) {
+    if (barrel.dead) return;
+    barrel.dead = true;
+    const center = barrel.group.position.clone();
+    this.scene.remove(barrel.group);
+    this.barrelMeshes = this.barrelMeshes.filter((mesh) => mesh.userData.barrel !== barrel);
+    this.obstacles = this.obstacles.filter((box) => box !== barrel.box);
+    this.spawnParticles(center.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xffa24a, this.isTouch ? 18 : 34, 7);
+    this.createPulseEffect(center, 0xff7a3d, 6);
+    this.audio.explosion();
+    this.shake = Math.min(1.4, this.shake + 0.5);
+    const aoe = 5.5;
+    let kills = 0;
+    for (const enemy of this.enemies) {
+      if (enemy.dead) continue;
+      const distance = enemy.group.position.distanceTo(center);
+      if (distance < aoe + enemy.radius) {
+        if (this.damageEnemy(enemy, 120 * (1 - distance / (aoe + enemy.radius) * 0.5), center.clone().sub(enemy.group.position).setY(0).normalize())) kills += 1;
+      }
+    }
+    if (center.distanceTo(this.player.position) < 4.5) this.damagePlayer(34 * (1 - center.distanceTo(this.player.position) / 4.5 * 0.6), center);
+    for (const other of this.barrels) {
+      if (!other.dead && other !== barrel && other.group.position.distanceTo(center) < 4.5) this.damageBarrel(other, 999, new THREE.Vector3());
+    }
+    if (kills >= 2) this.unlockAchievement('barrel');
+  }
+
+  createHealBeam(start, end) {
+    const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+    const material = new THREE.LineBasicMaterial({ color: 0x6bffb0, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+    const line = new THREE.Line(geometry, material);
+    this.scene.add(line);
+    this.tracers.push({ line, life: 0.25, maxLife: 0.25 });
+  }
+
+  updateBarrels(dt) {
+    for (const barrel of this.barrels) {
+      if (barrel.dead || barrel.flash <= 0) continue;
+      barrel.flash -= dt;
+      if (barrel.flash <= 0 && barrel.bodyMaterial) barrel.bodyMaterial.emissiveIntensity = 0.5;
     }
   }
 
@@ -1072,6 +1275,7 @@ export class Game {
     this.unlockAchievement('first-blood');
     if (this.combo >= 2.5) this.unlockAchievement('combo-master');
     if (enemy.type === 'bomber') this.unlockAchievement('defuser');
+    if (enemy.type === 'medic') this.unlockAchievement('medic-down');
     const gained = Math.floor(enemy.score * this.combo);
     this.score += gained;
     this.player.health = Math.min(this.player.maxHealth, this.player.health + this.player.killHeal);
@@ -1393,7 +1597,7 @@ export class Game {
       context.arc(center + x * scale, center + z * scale, radius, 0, Math.PI * 2);
       context.fill();
     };
-    this.enemies.forEach((enemy) => { if (!enemy.dead && !enemy.phased) plot(enemy.group.position, enemy.type === 'boss' ? '#ff9a55' : enemy.type === 'bomber' ? '#ffc24d' : enemy.type === 'phantom' ? '#5ce1ff' : '#ff5362', enemy.type === 'boss' ? 4 : 2.2); });
+    this.enemies.forEach((enemy) => { if (!enemy.dead && !enemy.phased) plot(enemy.group.position, enemy.type === 'boss' ? '#ff9a55' : enemy.type === 'turret' ? '#ffb24d' : enemy.type === 'medic' ? '#47e0a0' : enemy.type === 'bomber' ? '#ffc24d' : enemy.type === 'phantom' ? '#5ce1ff' : '#ff5362', enemy.type === 'boss' ? 4 : 2.2); });
     this.pickups.forEach((pickup) => plot(pickup.group.position, '#54f7d2', 1.5));
     context.restore();
     context.fillStyle = '#a9fff0';
@@ -1432,6 +1636,7 @@ export class Game {
       this.updateProjectiles(dt);
       this.updatePickups(dt);
       this.updateEffects(dt);
+      this.updateBarrels(dt);
       this.checkWave(dt);
       this.updateHUD();
       if (this.radarTimer <= 0) { this.radarTimer = 0.09; this.drawRadar(); }

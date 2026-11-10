@@ -79,6 +79,10 @@ export class AudioSystem {
       this.tone(920, 0.12, 0.13, 'square', 230);
       this.tone(1560, 0.09, 0.08, 'sine', 440);
       this.noise(0.09, 0.12, 4200);
+    } else if (type === 'rocket') {
+      this.noise(0.2, 0.32, 1300);
+      this.tone(150, 0.32, 0.2, 'sawtooth', 55);
+      this.tone(420, 0.12, 0.1, 'sine', 180, 0.05);
     } else {
       this.noise(0.075, 0.18, 1900);
       this.tone(190, 0.07, 0.12, 'square', 70);
