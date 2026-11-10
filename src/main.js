@@ -288,6 +288,8 @@ game = new Game($('#game-canvas'), $('#radar'), {
     $('#board-demo-state').textContent = active ? '自动演示中' : '手动操作';
   },
 });
+// 便于调试与控制台试验：暴露当前对局实例。
+window.game = game;
 window.nexusGame = game;
 
 $('#start-button').addEventListener('click', () => start(selectedMode));

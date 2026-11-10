@@ -5,6 +5,7 @@ const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 const cyl = (rt, rb, h, seg = 10) => new THREE.CylinderGeometry(rt, rb, h, seg);
 const torus = (r, t, rs = 6, ts = 24) => new THREE.TorusGeometry(r, t, rs, ts);
 const cone = (r, h, seg = 8) => new THREE.ConeGeometry(r, h, seg);
+const sph = (r, w = 10, h = 8) => new THREE.SphereGeometry(r, w, h);
 const random = (min, max) => min + Math.random() * (max - min);
 
 /**
