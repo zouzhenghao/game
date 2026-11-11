@@ -174,6 +174,7 @@ const BASE_UPGRADES = [
   { id: 'b-pulse', icon: '◎', name: '脉冲核心', desc: '脉冲伤害 +10 / 半径 +1。', apply: (g) => { g.player.pulseDamage += 10; g.player.pulseRadius += 1; } },
   { id: 'b-execute', icon: '⌖', name: '处决协议', desc: '处决加成 +8%。', apply: (g) => { g.player.executeBonus += 0.08; } },
   { id: 'b-pickup', icon: '⊙', name: '拾取场', desc: '拾取范围 +0.2。', apply: (g) => { g.player.pickupRadius += 0.2; } },
+  { id: 'b-aimassist', icon: '⌖', name: '战术辅助瞄具', desc: '开启轻度辅助瞄准：准星柔和吸附最近敌人、子弹命中更稳（仅前方锥形范围）。不瞬锁、不自动开火，公平但顺手。可叠加至 3 级。', apply: (g) => { g.player.aimAssistLevel = Math.min(3, (g.player.aimAssistLevel || 0) + 1); } },
 ];
 
 /** 货架上的付费武器附件 / 战术模块（稀有度按波次解锁，模仿土豆兄弟分层）。 */
@@ -462,6 +463,7 @@ export class Game {
       chainBonus: 0, chainDamage: 1, pickupRadius: 1.45, pickupPower: 1, dashWave: 0,
       skills: [], skillDmg: 1, skillFire: 1, skillBuff: 0, critProtocol: false, adaptiveArmor: false,
       siphon: false, nanite: 0, adrenaline: false, thorns: 0, medTime: 0, medRate: 0,
+      aimAssistLevel: 0,  // 平衡版辅助瞄准等级（波次三选一「战术辅助瞄具」累加，最高 3）
     };
     this.weaponState = WEAPONS.map((weapon) => ({ ammo: weapon.magazine, reserve: weapon.reserve }));
     this.loadout = [0];          // 已持有的武器（WEAPONS 绝对索引），最多 6 把对应 HUD 槽 1–6
@@ -1061,11 +1063,17 @@ export class Game {
           }
         }
       }
-      if (enemy.stun > 0) { /* 技能瘫痪：停止移动 */ }
-      else if (move.lengthSq() > 0) {
+      if (enemy.stun > 0) { /* 技能瘫痪：停止移动 */
+        if (enemy.velocity) enemy.velocity.multiplyScalar(0.6);
+      } else if (move.lengthSq() > 0) {
         const slowFactor = enemy.slow > 0 ? (enemy.slowMul || 0.5) : 1; // 被寒霜命中后减速
         move.normalize().multiplyScalar(enemy.speed * slowFactor * dt * timeScale);
         this.moveEnemy(enemy, move);
+        // 记录真实速度向量，供自瞄/锁头的「提前量」预测使用
+        if (!enemy.velocity) enemy.velocity = new THREE.Vector3();
+        enemy.velocity.copy(move).multiplyScalar(1 / Math.max(dt, 1e-3));
+      } else if (enemy.velocity) {
+        enemy.velocity.multiplyScalar(0.8);
       }
       if (enemy.slow > 0) {
         enemy.slow -= dt;
@@ -1313,6 +1321,7 @@ export class Game {
       this.camera.position.x += random(-1, 1) * this.shake * 0.08;
       this.camera.position.y += random(-1, 1) * this.shake * 0.08;
     }
+    this.updateAimAssist(dt); // 平衡版辅助瞄准：仅在持有「战术辅助瞄具」且非作弊/演示时，极轻柔吸附视角
     this.camera.rotation.set(this.pitch, this.yaw, 0);
     const baseFov = 72 + this.sprintBlend * 6 + this.slideBlend * 8;
     // 瞄具决定开镜倍率：红点 1.25x，3 倍镜 3x，5 倍镜 5x，狙击镜可调（默认 6x）
@@ -1520,6 +1529,46 @@ export class Game {
     }
   }
 
+  /**
+   * 平衡版辅助瞄准（战术辅助瞄具 perk）：仅在玩家已大致瞄准某敌人时，
+   * 把视角极轻微地往其头部吸附一点——不瞬锁、不自动开火，避免喧宾夺主。
+   * 与作弊码 lock/auto 的整相机锁头严格区分（后者才是「外挂」）。
+   */
+  updateAimAssist(dt) {
+    const L = this.player.aimAssistLevel;
+    if (!L || this.cheats.lock || this.cheats.auto || this.demoMode) return;
+    const origin = this.camera.getWorldPosition(new THREE.Vector3());
+    const dir = this.camera.getWorldDirection(new THREE.Vector3());
+    const cone = THREE.MathUtils.degToRad(10 + 3 * (L - 1)); // 仅前方 10–16° 锥形内生效
+    const maxRange = 34 + 6 * (L - 1);
+    let best = null, bestAng = Infinity;
+    const aim = new THREE.Vector3();
+    for (const enemy of this.enemies) {
+      if (enemy.dead || enemy.phased || enemy.spawnTime > 0) continue;
+      this.getAimPoint(enemy, aim);
+      if (!this.hasLineOfSight(origin, aim)) continue;
+      const to = aim.clone().sub(origin);
+      const dist = to.length();
+      if (dist > maxRange) continue;
+      to.normalize();
+      const ang = Math.acos(clamp(dir.dot(to), -1, 1));
+      if (ang < cone && ang < bestAng) { bestAng = ang; best = aim.clone(); }
+    }
+    if (!best) return;
+    const dx = best.x - origin.x, dy = best.y - origin.y, dz = best.z - origin.z;
+    const desiredYaw = Math.atan2(-dx, -dz);
+    const desiredPitch = Math.atan2(dy, Math.hypot(dx, dz));
+    let dyaw = desiredYaw - this.yaw;
+    while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+    while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+    const dpitch = desiredPitch - this.pitch;
+    // 极轻柔地拉：每帧只修正约 8% 误差，且单帧转角有上限，玩家随时可覆盖
+    const f = 1 - Math.exp(-dt * 6);
+    const maxStep = THREE.MathUtils.degToRad(14) * dt;
+    this.yaw += clamp(dyaw * f, -maxStep, maxStep);
+    this.pitch += clamp(dpitch * f, -maxStep, maxStep);
+  }
+
   /** 锁头 / 自动射击：按距离近→远选靶、视线过滤、同帧同步相机。 */
   updateCheats(dt) {
     const c = this.cheats;
@@ -1533,16 +1582,28 @@ export class Game {
         const head = this.getAimPoint(target);
         const dx = head.x - origin.x, dy = head.y - origin.y, dz = head.z - origin.z;
         const desiredYaw = Math.atan2(-dx, -dz);
-        let delta = desiredYaw - this.yaw;
-        while (delta > Math.PI) delta -= Math.PI * 2;
-        while (delta < -Math.PI) delta += Math.PI * 2;
-        this.yaw += delta * Math.min(1, dt * 11);
+        let dyaw = desiredYaw - this.yaw;
+        while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+        while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+        // 自适应转速：误差越大收敛越快，误差越小缓动收敛，避免过冲抖动与瞬移感
+        const yawErr = Math.abs(dyaw);
+        const yawK = 9 + Math.min(12, yawErr * 4);
+        this.yaw += dyaw * (1 - Math.exp(-dt * yawK));
         const horizontal = Math.hypot(dx, dz);
-        this.pitch = lerp(this.pitch, Math.atan2(dy, horizontal), Math.min(1, dt * 11));
+        const desiredPitch = Math.atan2(dy, horizontal);
+        const dpitch = desiredPitch - this.pitch;
+        const pitchK = 9 + Math.min(12, Math.abs(dpitch) * 4);
+        this.pitch += dpitch * (1 - Math.exp(-dt * pitchK));
         // 同帧同步相机：锁环投影与本帧 fireWeapon 都用最新朝向，不再慢一帧。
         this.camera.rotation.set(this.pitch, this.yaw, 0);
         this.camera.updateMatrixWorld(true);
-        if (c.auto) this.firing = true;
+        // 自动射击门控：仅当视角已对齐目标（<3°）且仍有视线时才开火，转向途中不乱喷
+        if (c.auto) {
+          const aimDir = this.camera.getWorldDirection(new THREE.Vector3());
+          const toHead = head.clone().sub(origin).normalize();
+          const aligned = Math.acos(clamp(aimDir.dot(toHead), -1, 1)) < THREE.MathUtils.degToRad(3);
+          this.firing = aligned && this.hasLineOfSight(origin, head);
+        }
       } else if (c.auto) {
         this.firing = false;
       }
@@ -1558,28 +1619,38 @@ export class Game {
   }
 
   /**
-   * 自动瞄准选靶：候选按距离由近到远排序；只有视线通畅的目标才能被锁定；
-   * 当前目标仍有效且没有被明显更近的目标取代时保持不变（稳定切换，不来回跳）。
+   * 自动瞄准选靶（OVERBOUND 锁头）：偏好「正面 + 准星附近 + 残血」的目标；
+   * 背后目标大幅降权，避免视角 180° 暴转；当前目标仍有效且分数不差太多时保持，
+   * 强迟滞防止视线扫过就乱切。只有视线通畅且距离 <95 的目标才进入候选。
    */
   pickCheatTarget(origin, dir = null) {
     const list = [];
+    const view = dir ? dir.clone().normalize() : null;
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.phased) continue;
       const aim = this.getAimPoint(enemy);
       const dist = aim.distanceTo(origin);
       if (dist > 95) continue;
       if (!this.hasLineOfSight(origin, aim)) continue;
-      const facing = dir ? clamp(dir.dot(aim.clone().sub(origin).normalize()), -1, 1) : 1;
-      // 出生动画中的单位也能被锁定（解决「偶尔锁不到」），只是排序优先级略低
-      const rank = dist + (enemy.spawnTime > 0 ? 5 : 0) - (facing > 0.3 ? 3 : 0);
-      list.push({ enemy, dist, rank });
+      let ang = 0;
+      if (view) {
+        const to = aim.clone().sub(origin).normalize();
+        ang = Math.acos(clamp(view.dot(to), -1, 1));
+      }
+      const frontal = ang < Math.PI * 0.5;                       // 前方 180° 才算正面目标
+      const hpRatio = enemy.health / enemy.maxHealth;
+      const score = ang * 6 + dist * 0.12 + (enemy.spawnTime > 0 ? 6 : 0)
+        - (1 - hpRatio) * 5                                        // 略偏好残血目标
+        + (frontal ? 0 : 40);                                      // 背后目标大幅降权，杜绝 180° 暴转
+      list.push({ enemy, dist, score });
     }
-    list.sort((a, b) => a.rank - b.rank);
     if (!list.length) return null;
+    list.sort((a, b) => a.score - b.score);
     const current = this.aimTarget;
     if (current && !current.dead && !current.phased) {
       const still = list.find((item) => item.enemy === current);
-      if (still && (list[0].enemy === current || still.dist <= list[0].dist + 6)) return current;
+      // 强迟滞：当前目标仍有效且分数不差太多（<5）则保持，避免来回跳
+      if (still && still.score <= list[0].score + 5) return current;
     }
     return list[0].enemy;
   }
@@ -1704,6 +1775,10 @@ export class Game {
     this.audio.shot(weapon.id);
     if (this.isTouch) {
       const assisted = this.getAimAssist(origin, baseDirection);
+      if (assisted) baseDirection.copy(assisted);
+    } else if (this.player.aimAssistLevel > 0) {
+      // 平衡版辅助瞄具：桌面端同样获得轻度子弹磁吸（等级越高锥形/射程略宽）
+      const assisted = this.getAimAssist(origin, baseDirection, this.player.aimAssistLevel);
       if (assisted) baseDirection.copy(assisted);
     }
     let anyHit = false;
@@ -1915,10 +1990,14 @@ export class Game {
     this.tracers.push({ line, life: 0.18, maxLife: 0.18 });
   }
 
-  getAimAssist(origin, direction) {
+  getAimAssist(origin, direction, level = 0) {
+    // 触屏基线已自带辅助瞄准；等级（战术辅助瞄具 perk）在其上小幅放宽锥形与射程，保持公平。
+    const baseCone = this.isBoard ? 0.13 : 0.08;
+    const cone = baseCone + level * 0.02;            // 每级约 +1.1° 锥形半角
+    const baseRange = this.isBoard ? 46 : 32;
+    const maxRange = baseRange + level * 6;          // 每级 +6m 作用距离
     let best = null;
-    let bestAngle = this.isBoard ? 0.13 : 0.08;
-    const maxRange = this.isBoard ? 46 : 32;
+    let bestAngle = cone;
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.spawnTime > 0 || enemy.phased) continue;
       const aim = this.getAimPoint(enemy);
