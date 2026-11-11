@@ -29,21 +29,27 @@ html[data-device="board"] .mobile-controls{display:block}
 html[data-device="mobile"] .hud-bottom-left,
 html[data-device="board"] .hud-bottom-left{display:none}
 html[data-device="desktop"] .mobile-controls{display:none!important}
-/* 手动指定触屏档位且处于横屏时，补齐系统 media query 不会命中的定位 */
-@media(orientation:landscape){
+/* 移动端通用：武器 HUD 贴底，避免与右侧动作键重叠（竖屏/横屏统一） */
 html[data-device="mobile"] .weapon-hud{bottom:12px}
 html[data-device="mobile"] .weapon-slots{display:none}
-html[data-device="mobile"] .hud-pause{display:block}
-html[data-device="mobile"] .touch-stick{position:absolute;left:28px;bottom:35px;width:112px;height:112px;border:1px solid #9ac6bc33;background:#07130f44;border-radius:50%;pointer-events:auto}
+html[data-device="mobile"] .hud-pause{display:none}
+/* 手动指定触屏档位且处于横屏时，补齐系统 media query 不会命中的定位 */
+@media(orientation:landscape){
+html[data-device="mobile"] .touch-stick{position:absolute;left:20px;bottom:20px;width:112px;height:112px;border:1px solid #9ac6bc33;background:#07130f44;border-radius:50%;pointer-events:auto}
 html[data-device="mobile"] .look-zone{position:absolute;right:0;top:15%;width:55%;height:60%;pointer-events:auto}
-html[data-device="mobile"] .mobile-fire{position:absolute;right:27px;bottom:115px;width:77px;height:77px;border:1px solid #54f7d277;background:#54f7d214;border-radius:50%;display:grid;place-items:center}
+html[data-device="mobile"] .mobile-fire{position:absolute;right:20px;bottom:165px;width:77px;height:77px;border:1px solid #54f7d277;background:#54f7d214;border-radius:50%;display:grid;place-items:center}
 html[data-device="mobile"] .mobile-small{position:absolute;width:39px;height:39px;background:#07130f88;border:1px solid #87aaa144;border-radius:50%;font-family:'Share Tech Mono',monospace;font-size:12px;color:#b7d0c9;pointer-events:auto}
-html[data-device="mobile"] .mobile-small.reload{right:118px;bottom:91px}
-html[data-device="mobile"] .mobile-small.dash{left:150px;bottom:43px}
-html[data-device="mobile"] .mobile-small.pulse{left:150px;bottom:94px}
-html[data-device="mobile"] .mobile-small.switch{right:117px;bottom:143px}
-html[data-device="mobile"] .mobile-small.overdrive{right:27px;bottom:207px}
-html[data-device="mobile"] .energy-block{left:14px;bottom:150px;width:150px}
+html[data-device="mobile"] .mobile-small.reload{right:118px;bottom:165px}
+html[data-device="mobile"] .mobile-small.dash{left:178px;bottom:43px}
+html[data-device="mobile"] .mobile-small.pulse{left:178px;bottom:94px}
+html[data-device="mobile"] .mobile-small.switch{left:225px;bottom:190px}
+html[data-device="mobile"] .mobile-small.overdrive{left:178px;bottom:145px}
+html[data-device="mobile"] .mobile-small.jump{left:178px;bottom:190px}
+html[data-device="mobile"] .mobile-small.slide{left:178px;bottom:236px}
+html[data-device="mobile"] .mobile-small.cheat{left:225px;bottom:236px}
+html[data-device="mobile"] .mobile-small.pause{left:14px;top:108px}
+html[data-device="mobile"] .energy-block{left:14px;bottom:200px;width:150px}
+html[data-device="mobile"] .mobile-skills{bottom:230px}
 }
 
 /* ---------- 白板专属按钮默认隐藏 ---------- */
