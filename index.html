@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#05090d" />
-    <meta name="description" content="NEXUS STRIKE 零界突击 1.0 正式版——浏览器里的赛博科技风 3D 第一人称射击游戏。15 把武器、9 类敌人、4 种模式、战后补给站与肉鸽强化、战术任务与故事线、NPC 商人、电脑/手机/希沃白板三端适配。" />
-    <title>NEXUS STRIKE // 零界突击 1.0 正式版</title>
+    <meta name="description" content="NEXUS STRIKE 零界突击 2.0 正式版——浏览器里的赛博科技风 3D 第一人称射击游戏。15 把武器、9 类敌人、4 种模式、战后补给站与肉鸽强化、13 种战术技能卡、三阶段整备、战术任务与故事线、NPC 商人、电脑/手机/希沃白板三端适配。" />
+    <title>NEXUS STRIKE // 零界突击 2.0 正式版</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305090d'/%3E%3Cpath d='M14 46V18h8l12 17V18h8v28h-8L22 29v17z' fill='%2354f7d2'/%3E%3Cpath d='M46 18h5v28h-5z' fill='%2354f7d2'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,7 +39,7 @@
 
         <main class="hero">
           <div class="hero-copy">
-            <div class="eyebrow"><span>NX-07</span> / 神经链接已建立</div>
+            <div class="eyebrow"><span>NX-07</span> / 神经链接已建立 <em class="ver-tag">V2.0 正式版</em></div>
             <h1><span class="title-outline">零界</span><br />突击<span class="title-dot">.</span></h1>
             <div class="english-title">NEXUS STRIKE</div>
             <p class="hero-desc">城市防线已经失守。接入战术外骨骼，深入数据废墟，<br class="desktop-only" />15 把武器、战后补给站与章节战役，在合围完成前撕开最后一道缺口。</p>
@@ -132,6 +132,7 @@
           <div class="energy-bar"><i id="energy-fill"></i></div>
         </div>
         <div class="weapon-hud"><div class="weapon-slots"><span data-slot="0" class="active">1</span><span data-slot="1">2</span><span data-slot="2">3</span><span data-slot="3">4</span><span data-slot="4">5</span><span data-slot="5">6</span></div><small id="weapon-class">突击步枪 // AUTO</small><h2 id="weapon-name">VX-9 <span>脉冲</span></h2><div class="ammo"><strong id="ammo-value">30</strong><span>/ <b id="reserve-value">180</b></span></div><div id="reload-hint" class="reload-hint">按 R 装填弹药</div></div>
+        <div id="skill-bar" class="skill-bar"></div>
         <button id="pause-button" class="hud-pause" aria-label="暂停游戏">Ⅱ</button>
         <div id="damage-vignette" class="damage-vignette"></div>
         <div id="damage-direction" class="damage-direction">⌄</div>
@@ -166,6 +167,7 @@
             <button id="mobile-aim" class="mobile-small aim board-only" aria-label="精确瞄准">◎</button>
             <button id="mobile-demo" class="mobile-small demo board-only" aria-label="课堂演示">AUTO</button>
           </div>
+          <div id="mobile-skills" class="mobile-skills"></div>
         </div>
       </section>
 

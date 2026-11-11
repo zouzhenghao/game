@@ -189,6 +189,7 @@ function updateHUD(data) {
   $('#credits-value').textContent = `${Math.floor(data.credits || 0)} CR`;
   updateAbility('#ability-dash', data.dashCooldown, data.dashMax);
   updateAbility('#ability-pulse', data.pulseCooldown, data.pulseMax);
+  renderSkills(data.skills, data.skillBuff);
   const energyPct = data.overdrive > 0 ? 100 : data.energy / data.energyMax * 100;
   $('#energy-fill').style.width = `${Math.max(0, Math.min(100, energyPct))}%`;
   const ready = data.energy >= data.energyMax && data.overdrive <= 0;
@@ -220,6 +221,36 @@ function updateAbility(selector, cooldown, max) {
   element.classList.toggle('cooldown', !ready);
   element.querySelector('.ability-status').textContent = ready ? '就绪' : `${cooldown.toFixed(1)}s`;
   element.querySelector('.ability span i').style.width = `${100 - Math.min(100, cooldown / Math.max(0.1, max) * 100)}%`;
+}
+
+// 技能槽：桌面显示 #skill-bar（键盘 Z/X/V/B），触屏显示 #mobile-skills。结构随拥有技能变化时才重建，冷却每帧更新。
+let skillSig = '';
+function renderSkills(skills, skillBuff) {
+  const bar = $('#skill-bar');
+  const mob = $('#mobile-skills');
+  if (!bar || !mob) return;
+  const list = skills || [];
+  const ids = list.map((s) => s.id).join(',');
+  const touch = game && game.isTouch;
+  if (ids !== skillSig) {
+    skillSig = ids;
+    const keys = ['Z', 'X', 'V', 'B'];
+    bar.innerHTML = list.map((s, i) => `<button class="skill-slot" data-skill="${i}"><kbd>${keys[i] || ''}</kbd><div class="skill-ic">${s.icon}</div><span class="skill-cd"></span></button>`).join('');
+    mob.innerHTML = list.map((s, i) => `<button class="mobile-skill" data-skill="${i}">${s.icon}</button>`).join('');
+    bar.style.display = (!touch && list.length) ? 'flex' : 'none';
+    mob.style.display = (touch && list.length) ? 'flex' : 'none';
+  }
+  list.forEach((s, i) => {
+    const ready = s.cooldown <= 0;
+    const el = bar.children[i];
+    if (el) {
+      el.classList.toggle('cooldown', !ready);
+      el.querySelector('.skill-cd').textContent = ready ? '' : s.cooldown.toFixed(1);
+      el.style.setProperty('--p', ready ? '100%' : `${100 - Math.min(100, s.cooldown / Math.max(0.1, s.max) * 100)}%`);
+    }
+    const me = mob.children[i];
+    if (me) me.classList.toggle('cooldown', !ready);
+  });
 }
 
 function announce(title, subtitle = '', eyebrow = 'COMBAT UPDATE', duration = 2200) {
@@ -344,7 +375,7 @@ function renderShop(shop, credits, containerId, creditsId) {
   if ($(creditsId)) $(creditsId).textContent = `${Math.floor(credits)} CR`;
   container.innerHTML = shop.map((item, index) => {
     const disabled = item.sold || credits < item.price;
-    const catLabel = item.category === 'supply' ? '战场补给' : (WEAPON_CATEGORY_LABEL[item.category] || '武器');
+    const catLabel = item.category === 'skill' ? (item.kind === 'active' ? '主动技能' : '被动技能') : (item.category === 'supply' ? '战场补给' : (WEAPON_CATEGORY_LABEL[item.category] || '武器'));
     const rarityBadge = item.rarity ? `<span class="rarity-badge rarity-${item.rarity}">${'◆'.repeat(item.rarity)} R${item.rarity}</span>` : '';
     const lockBtn = item.sold ? '' : `<button class="lock-btn${item.locked ? ' locked' : ''}" data-lock="${index}" title="锁定后刷新不替换">${item.locked ? '🔒' : '🔓'}</button>`;
     return `<div class="shop-cell">
@@ -494,6 +525,9 @@ $('#cheat-console').addEventListener('click', (event) => { if (event.target === 
 // 手机端暂停 / 菜单按钮（桌面用右上角暂停键）
 const mobilePause = $('#mobile-pause');
 if (mobilePause) mobilePause.addEventListener('click', () => { if (game.state === 'playing') game.pause(); });
+// 技能槽点击释放（桌面 / 触屏统一走事件委托，避免每帧重建丢失监听）
+$('#skill-bar')?.addEventListener('click', (event) => { const b = event.target.closest('[data-skill]'); if (b) game.activateSkill(Number(b.dataset.skill)); });
+$('#mobile-skills')?.addEventListener('click', (event) => { const b = event.target.closest('[data-skill]'); if (b) game.activateSkill(Number(b.dataset.skill)); });
 
 // 作弊面板：手机 / 鼠标可直接点按的开挂按钮（无需键盘输入密语）
 function buildCheatButtons() {

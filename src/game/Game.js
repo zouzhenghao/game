@@ -222,6 +222,51 @@ const SUPPLIES = [
   { id: 's-vamp', icon: '⟁', name: '维生芯片', rarity: 3, price: 200, desc: '击杀回护盾 +3。', apply: (g) => { g.player.killShield = (g.player.killShield || 0) + 3; } },
 ];
 
+/**
+ * 战术技能卡（科技风味）：主动技能购买后进入技能槽（带冷却），被动技能购买即刻生效。
+ * 与基础属性卡（BASE_UPGRADES / SHOP_MODS / SUPPLIES）互补，丰富构筑深度。
+ */
+const SKILLS = [
+  // —— 主动技能（消耗冷却）——
+  { id: 'sk-emp', kind: 'active', icon: '✺', name: '电磁过载', rarity: 2, price: 200, cooldown: 18, desc: '释放范围冲击，造成 130 伤害并瘫痪敌人 1 秒。', },
+  { id: 'sk-nano', kind: 'active', icon: '✚', name: '纳米修复立场', rarity: 1, price: 150, cooldown: 16, desc: '立即恢复 55 生命与 40 护盾（医疗）。' },
+  { id: 'sk-med', kind: 'active', icon: '⚕', name: '应急医疗舱', rarity: 2, price: 190, cooldown: 20, desc: '立即 +50 生命，并在 4 秒内持续恢复（医疗）。' },
+  { id: 'sk-ammo', kind: 'active', icon: '▤', name: '弹药空投', rarity: 1, price: 140, cooldown: 20, desc: '补满全部武器弹药与备弹（补给）。' },
+  { id: 'sk-barrier', kind: 'active', icon: '◇', name: '力场护壁', rarity: 3, price: 260, cooldown: 26, desc: '展开 3 秒无敌护盾立场。' },
+  { id: 'sk-time', kind: 'active', icon: '⏳', name: '时间稀释', rarity: 3, price: 240, cooldown: 24, desc: '6 秒内大幅减缓所有敌人行动。' },
+  { id: 'sk-overload', kind: 'active', icon: 'ϟ', name: '相位超载', rarity: 3, price: 250, cooldown: 22, desc: '4 秒内伤害 ×2、射速 +50%。' },
+  { id: 'sk-storm', kind: 'active', icon: '↯', name: '磁暴', rarity: 2, price: 210, cooldown: 18, desc: '连锁电弧打击最近的 8 个敌人。' },
+  // —— 被动技能（购买即生效）——
+  { id: 'sk-adaptive', kind: 'passive', icon: '🛡', name: '自适应装甲', rarity: 2, price: 200, desc: '生命低于 30% 时受到伤害 -40%。', apply: (g) => { g.player.adaptiveArmor = true; } },
+  { id: 'sk-siphon', kind: 'passive', icon: '⟲', name: '能量虹吸', rarity: 1, price: 150, desc: '每次击杀使脉冲冷却 -1.2 秒。', apply: (g) => { g.player.siphon = true; } },
+  { id: 'sk-protocol', kind: 'passive', icon: '✦', name: '暴击协议', rarity: 2, price: 190, desc: '每第 7 次射击必定暴击。', apply: (g) => { g.player.critProtocol = true; } },
+  { id: 'sk-nanite', kind: 'passive', icon: '❖', name: '自修复纳米', rarity: 2, price: 180, desc: '每秒自动恢复 2.5 生命。', apply: (g) => { g.player.nanite = 2.5; } },
+  { id: 'sk-adrenaline', kind: 'passive', icon: '⌁', name: '肾上腺素', rarity: 1, price: 160, desc: '生命低于 40% 时射速 +30%。', apply: (g) => { g.player.adrenaline = true; } },
+];
+
+/** 主动技能激活逻辑（g 即 Game 实例）。被动技能走各自 apply。 */
+const SKILL_ACTIVATE = {
+  'sk-emp': (g) => { g.castAoe(g.player.position.clone(), 16, 130, 0x54f7d2, 1.0); g.callbacks.onAnnounce('电磁过载', '范围冲击 · 敌人瘫痪', 'SKILL // EMP', 1500); },
+  'sk-nano': (g) => { const p = g.player; p.health = Math.min(p.maxHealth, p.health + 55); p.shield = Math.min(p.maxShield, p.shield + 40); g.createPulseEffect(p.position.clone(), 0x6cffd0, 8); g.callbacks.onAnnounce('纳米修复立场', '生命 +55 · 护盾 +40', 'SKILL // NANO', 1500); },
+  'sk-med': (g) => { const p = g.player; p.health = Math.min(p.maxHealth, p.health + 50); p.medTime = 4; p.medRate = 4; g.createPulseEffect(p.position.clone(), 0x7dffb0, 9); g.callbacks.onAnnounce('应急医疗舱', '立即 +50 · 4 秒持续恢复', 'SKILL // MED', 1500); },
+  'sk-ammo': (g) => { g.weaponState.forEach((s, i) => { s.ammo = WEAPONS[i].magazine; s.reserve = WEAPONS[i].reserve; }); g.callbacks.onAnnounce('弹药空投', '全武器弹药已补满', 'SKILL // AMMO', 1500); },
+  'sk-barrier': (g) => { const p = g.player; p.invulnerable = Math.max(p.invulnerable, 3); g.createPulseEffect(p.position.clone(), 0x9b8cff, 9); g.callbacks.onAnnounce('力场护壁', '3 秒无敌护盾', 'SKILL // BARRIER', 1500); },
+  'sk-time': (g) => { g.enemySlow = 6; g.callbacks.onAnnounce('时间稀释', '敌人行动减缓 6 秒', 'SKILL // DILATION', 1500); },
+  'sk-overload': (g) => { const p = g.player; p.skillBuff = 4; p.skillDmg = 2; p.skillFire = 1.5; g.createPulseEffect(p.position.clone(), 0xffd45c, 12); g.callbacks.onAnnounce('相位超载', '伤害 ×2 · 射速 +50% · 4 秒', 'SKILL // OVERLOAD', 1500); },
+  'sk-storm': (g) => {
+    const p = g.player; const center = p.position.clone();
+    const near = g.enemies.filter((e) => !e.dead && !e.phased && e.spawnTime <= 0).map((e) => ({ e, d: e.group.position.distanceTo(center) })).sort((a, b) => a.d - b.d).slice(0, 8);
+    g.createPulseEffect(center, 0x7de8ff, 14);
+    for (const { e } of near) {
+      g.damageEnemy(e, 45 * p.damageMultiplier, e.group.position.clone().sub(center).setY(0).normalize());
+      g.createTracer(center.clone().add(new THREE.Vector3(0, 1.6, 0)), e.group.position.clone().add(new THREE.Vector3(0, 1.2, 0)), 0x7de8ff, 0.25);
+      e.stun = Math.max(e.stun || 0, 0.4);
+    }
+    g.audio.pulse();
+    g.callbacks.onAnnounce('磁暴', '连锁电弧打击 8 个目标', 'SKILL // STORM', 1500);
+  },
+};
+
 /** 稀有度解锁波次：1 常驻，2 自第 2 波，3 自第 4 波，4 自第 8 波。 */
 const MOD_RARITY_UNLOCK = { 1: 0, 2: 2, 3: 4, 4: 8 };
 
@@ -265,6 +310,7 @@ export class Game {
     this.pitch = 0;
     this.cheats = { god: false, ammo: false, lock: false, auto: false, wall: false, slow: false };
     this.cheated = false;
+    this.enemySlow = 0;                       // 时间稀释技能：全局敌人减速计时
     this.aimTarget = null;
     this.aimHoldTimer = 0;                  // 目标粘滞计时：自动瞄准不来回乱跳
     this.hitStop = 0;                       // 命中顿帧（绝区零式打击反馈）
@@ -414,6 +460,8 @@ export class Game {
       critChance: 0.08, critMultiplier: 1.75, executeBonus: 1, executeThreshold: 0.35,
       energy: 0, energyMax: 100, energyGain: 1, overdrive: 0, overdriveMax: 8,
       chainBonus: 0, chainDamage: 1, pickupRadius: 1.45, pickupPower: 1, dashWave: 0,
+      skills: [], skillDmg: 1, skillFire: 1, skillBuff: 0, critProtocol: false, adaptiveArmor: false,
+      siphon: false, nanite: 0, adrenaline: false, thorns: 0, medTime: 0, medRate: 0,
     };
     this.weaponState = WEAPONS.map((weapon) => ({ ammo: weapon.magazine, reserve: weapon.reserve }));
     this.loadout = [0];          // 已持有的武器（WEAPONS 绝对索引），最多 6 把对应 HUD 槽 1–6
@@ -581,6 +629,8 @@ export class Game {
       // 数字键 1–6 对应当前 loadout 的六个槽位
       const digit = /^Digit([1-6])$/.exec(event.code);
       if (digit) { const w = this.loadout[Number(digit[1]) - 1]; if (w !== undefined) this.switchWeapon(w); }
+      const skillKey = /^Key([ZXVB])$/.exec(event.code);
+      if (skillKey) this.activateSkill({ Z: 0, X: 1, V: 2, B: 3 }[skillKey[1]]);
       if (event.code === 'KeyG') this.openFieldShop();
       if (event.code === 'KeyP' || (event.code === 'Escape' && !document.pointerLockElement)) {
         if (this.state === 'playing') this.pause();
@@ -811,7 +861,7 @@ export class Game {
     const enemy = {
       type, group, material, fadeMaterials: [material, glow, dark, accent, warning],
       health: data.health * (1 + Math.max(0, this.wave - 1) * (type === 'boss' ? 0.12 : 0.085)) * diff.hp, maxHealth: 0,
-      speed: data.speed * (1 + Math.min(0.45, this.wave * 0.018)), damage: data.damage * (1 + this.wave * 0.022) * diff.damage, score: Math.round(data.score * diff.score),
+      speed: data.speed * (1 + Math.min(0.45, this.wave * 0.018)), damage: data.damage * (1 + this.wave * 0.026) * diff.damage, score: Math.round(data.score * diff.score),
       radius: data.radius, name: data.name, attackCooldown: random(0.4, 1.3), spawnTime: 0.85, dead: false, deathTimer: 0,
       strafe: Math.random() > 0.5 ? 1 : -1, phase: Math.random() * Math.PI * 2, hitTimer: 0, healthBar: null, barFill: null,
       phased: false, phaseTimer: random(1.4, 2.8), fuse: 0, chargeTimer: 0, healTimer: 0, slow: 0,
@@ -859,6 +909,8 @@ export class Game {
 
   updateEnemies(dt) {
     const playerFlat = new THREE.Vector3(this.player.position.x, 0, this.player.position.z);
+    this.enemySlow = Math.max(0, this.enemySlow - dt);
+    const timeScale = this.enemySlow > 0 ? 0.35 : 1;
     for (const enemy of this.enemies) {
       if (enemy.crown) enemy.crown.rotation.z += dt * 1.3;
       if (enemy.dead) {
@@ -874,6 +926,7 @@ export class Game {
       }
       enemy.phase += dt;
       enemy.hitTimer -= dt;
+      if (enemy.stun > 0) enemy.stun -= dt;
       enemy.material.emissiveIntensity = enemy.hitTimer > 0 ? 3.2 : (enemy.type === 'boss' ? 1.0 : 0.8);
       enemy.group.children.forEach((child) => { if (child.userData.spin) child.rotation.z += child.userData.spin * dt; });
       const parts = enemy.parts;
@@ -1008,9 +1061,10 @@ export class Game {
           }
         }
       }
-      if (move.lengthSq() > 0) {
+      if (enemy.stun > 0) { /* 技能瘫痪：停止移动 */ }
+      else if (move.lengthSq() > 0) {
         const slowFactor = enemy.slow > 0 ? (enemy.slowMul || 0.5) : 1; // 被寒霜命中后减速
-        move.normalize().multiplyScalar(enemy.speed * slowFactor * dt);
+        move.normalize().multiplyScalar(enemy.speed * slowFactor * dt * timeScale);
         this.moveEnemy(enemy, move);
       }
       if (enemy.slow > 0) {
@@ -1080,6 +1134,32 @@ export class Game {
     for (const barrel of this.barrels) {
       if (!barrel.dead && barrel.group.position.distanceTo(center) < 5.5) this.damageBarrel(barrel, 60, new THREE.Vector3());
     }
+  }
+
+  /** 范围技能通用：在 center 释放脉冲环并对范围内敌人造成伤害，可选瘫痪时长。 */
+  castAoe(center, radius, damage, color, stun = 0) {
+    const player = this.player;
+    this.createPulseEffect(center.clone(), color, radius);
+    this.audio.pulse();
+    for (const enemy of this.enemies) {
+      if (enemy.dead || enemy.phased || enemy.spawnTime > 0) continue;
+      if (enemy.group.position.distanceTo(center) <= radius && this.blastReaches(center, enemy)) {
+        this.damageEnemy(enemy, damage * player.damageMultiplier, enemy.group.position.clone().sub(center).setY(0).normalize());
+        if (stun > 0) enemy.stun = Math.max(enemy.stun || 0, stun);
+      }
+    }
+  }
+
+  /** 释放技能槽中第 index 个主动技能（键盘 Z/X/V/B 或点击）。 */
+  activateSkill(index) {
+    if (this.state !== 'playing') return;
+    const skill = this.player.skills[index];
+    if (!skill || skill.cooldown > 0) { this.audio.empty?.(); return; }
+    const fn = SKILL_ACTIVATE[skill.id];
+    if (!fn) return;
+    fn(this);
+    skill.cooldown = skill.max;
+    this.audio.upgrade();
   }
 
   moveEnemy(enemy, movement) {
@@ -1171,6 +1251,10 @@ export class Game {
     player.pulseCooldown = Math.max(0, player.pulseCooldown - dt);
     player.invulnerable = Math.max(0, player.invulnerable - dt);
     player.overdrive = Math.max(0, player.overdrive - dt);
+    for (const s of player.skills) s.cooldown = Math.max(0, s.cooldown - dt);
+    if (player.nanite > 0) player.health = Math.min(player.maxHealth, player.health + player.nanite * dt);
+    if (player.medTime > 0) { player.medTime -= dt; player.health = Math.min(player.maxHealth, player.health + player.medRate * dt); }
+    if (player.skillBuff > 0) { player.skillBuff -= dt; if (player.skillBuff <= 0) { player.skillDmg = 1; player.skillFire = 1; } }
     player.lastDamage += dt;
     if (player.lastDamage > player.shieldDelay && player.shield < player.maxShield) player.shield = Math.min(player.maxShield, player.shield + player.shieldRegen * dt);
     this.weaponCooldown = Math.max(0, this.weaponCooldown - dt);
@@ -1606,7 +1690,9 @@ export class Game {
     if (!infinite) state.ammo -= 1;
     this.shotsFired += 1;
     this.shotThisHold = true;
-    this.weaponCooldown = 1 / (weapon.fireRate * player.fireRateMultiplier * (overdrive ? 1.6 : 1));
+    let fireMul = player.fireRateMultiplier * (overdrive ? 1.6 : 1);
+    if (player.adrenaline && player.health < player.maxHealth * 0.4) fireMul *= 1.3;
+    this.weaponCooldown = 1 / (weapon.fireRate * fireMul * player.skillFire);
     this.weaponRecoil = Math.min(1.5, this.weaponRecoil + (weapon.id === 'shotgun' ? 1 : weapon.id === 'rail' ? 1.25 : weapon.id === 'arc' ? 0.45 : 0.32));
     this.pitch = clamp(this.pitch + (weapon.id === 'shotgun' ? 0.025 : weapon.id === 'rail' ? 0.018 : 0.004), -1.45, 1.45);
     if (weapon.rocket) {
@@ -1666,8 +1752,9 @@ export class Game {
           if (uniqueEnemies.includes(enemy)) continue;
           uniqueEnemies.push(enemy);
           const critical = hit.object.userData.critical;
-          const critRoll = Math.random() < player.critChance + (weapon.critBonus || 0);
-          const amount = weapon.damage * player.damageMultiplier * (overdrive ? 1.5 : 1) * (critical ? 1.65 : 1) * (critRoll ? player.critMultiplier : 1);
+          let critRoll = Math.random() < player.critChance + (weapon.critBonus || 0);
+          if (player.critProtocol && this.shotsFired > 0 && this.shotsFired % 7 === 0) critRoll = true;
+          const amount = weapon.damage * player.damageMultiplier * (overdrive ? 1.5 : 1) * player.skillDmg * (critical ? 1.65 : 1) * (critRoll ? player.critMultiplier : 1);
           if (this.mission?.id === 'headshot' && hit.object.userData.critical) this.addMissionProgress();
           const killed = this.damageEnemy(enemy, amount, direction, { critical: Boolean(critical || critRoll), critRoll });
           if (weapon.chain) this.chainLightning(enemy, hit.point, amount, weapon.chain + player.chainBonus, new Set(uniqueEnemies));
@@ -1914,6 +2001,7 @@ export class Game {
     if (this.mission?.id === 'kills') this.addMissionProgress();
     this.player.health = Math.min(this.player.maxHealth, this.player.health + this.player.killHeal);
     this.player.shield = Math.min(this.player.maxShield, this.player.shield + this.player.killHeal * 0.75 + this.player.killShield);
+    if (this.player.siphon) this.player.pulseCooldown = Math.max(0, this.player.pulseCooldown - 1.2);
     const position = enemy.group.position.clone().add(new THREE.Vector3(0, enemy.type === 'boss' ? 3 : 1.1, 0));
     this.spawnParticles(position, ENEMY_DATA[enemy.type].color, enemy.type === 'boss' ? 70 : 20, enemy.type === 'boss' ? 8 : 4.5);
     if (enemy.type === 'boss') {
@@ -2145,6 +2233,8 @@ export class Game {
     if (this.player.invulnerable > 0) return;
     if (this.cheats.god) return;
     this.player.lastDamage = 0;
+    if (this.player.adaptiveArmor && this.player.health < this.player.maxHealth * 0.3) amount *= 0.6;
+    if (this.player.thorns > 0) this.castAoe(this.player.position.clone(), 6.5, this.player.thorns, 0xff5577, 0);
     this.waveDamageTaken += amount;
     this.addEnergy(8);
     let remaining = amount;
@@ -2309,6 +2399,7 @@ export class Game {
       .filter((item) => !owned.has(item.weaponIndex));
     const supplyCandidates = SUPPLIES.filter((s) => this.wave >= (MOD_RARITY_UNLOCK[s.rarity] || 0));
     const modCandidates = SHOP_MODS.filter((m) => this.wave >= (MOD_RARITY_UNLOCK[m.rarity] || 0));
+    const skillCandidates = SKILLS.filter((s) => this.wave >= (MOD_RARITY_UNLOCK[s.rarity] || 0));
     const take = (pool, n) => {
       const out = [];
       const copy = [...pool];
@@ -2317,8 +2408,9 @@ export class Game {
     };
     const slots = [];
     take(weaponCandidates, 3).forEach((w) => slots.push(w));
-    take(supplyCandidates, 4).forEach((s) => slots.push({ type: 'supply', id: s.id, icon: s.icon, name: s.name, category: 'supply', rarity: s.rarity, price: Math.round(s.price * (this.shopDiscount || 1)), desc: s.desc, apply: s.apply }));
-    take(modCandidates, 3).forEach((m) => slots.push({ type: 'mod', modId: m.id, icon: m.icon, name: m.name, category: 'mod', rarity: m.rarity, price: Math.round(m.price * (this.shopDiscount || 1)), desc: m.desc, apply: m.apply }));
+    take(supplyCandidates, 2).forEach((s) => slots.push({ type: 'supply', id: s.id, icon: s.icon, name: s.name, category: 'supply', rarity: s.rarity, price: Math.round(s.price * (this.shopDiscount || 1)), desc: s.desc, apply: s.apply }));
+    take(modCandidates, 2).forEach((m) => slots.push({ type: 'mod', modId: m.id, icon: m.icon, name: m.name, category: 'mod', rarity: m.rarity, price: Math.round(m.price * (this.shopDiscount || 1)), desc: m.desc, apply: m.apply }));
+    take(skillCandidates, 3).forEach((s) => slots.push({ type: 'skill', skillId: s.id, kind: s.kind, icon: s.icon, name: s.name, category: 'skill', rarity: s.rarity, price: Math.round(s.price * (this.shopDiscount || 1)), desc: s.desc, apply: s.apply, cooldown: s.cooldown }));
     const items = slots.map((item) => ({ ...item, sold: false, locked: false }));
     // 刷新时保留上一轮的锁定（未售出）项到原下标
     if (prev) prev.forEach((old, i) => { if (old.locked && !old.sold && items[i]) items[i] = old; });
@@ -2332,7 +2424,10 @@ export class Game {
     this.credits -= item.price;
     item.sold = true;
     if (item.type === 'weapon') this.unlockWeapon(item.weaponIndex);
-    else if (item.apply) item.apply(this);
+    else if (item.type === 'skill') {
+      if (item.kind === 'active') this.player.skills.push({ id: item.skillId, name: item.name, icon: item.icon, desc: item.desc, cooldown: 0, max: item.cooldown, kind: 'active' });
+      else if (item.apply) item.apply(this);
+    } else if (item.apply) item.apply(this);
     this.audio.upgrade();
     if (this.state === 'upgrade') this.callbacks.onUpgrades?.(this.prepPayload());
     else this.callbacks.onShop?.({ shop: this.currentShop, credits: this.credits, standalone: this.state === 'shop' });
@@ -2489,6 +2584,7 @@ export class Game {
       scopeType: this.currentScopeType, sniperZoom: this.sniperZoom, aiming: this.aiming,
       ammo: this.weaponState[this.weaponIndex].ammo, reserve: this.weaponState[this.weaponIndex].reserve,
       reloading: this.reloadTimer > 0, unlockedWeapon: this.unlockedWeapon, dashCooldown: this.player.dashCooldown,
+      skills: this.player.skills.map((s) => ({ id: s.id, name: s.name, icon: s.icon, cooldown: s.cooldown, max: s.max, kind: s.kind })), skillBuff: this.player.skillBuff,
       dashMax: this.player.dashMax, pulseMax: this.player.pulseMax * (this.player.overdrive > 0 ? 0.5 : 1),
       pulseCooldown: this.player.pulseCooldown, boss: boss ? { health: boss.health, maxHealth: boss.maxHealth } : null,
       energy: this.player.energy, energyMax: this.player.energyMax, overdrive: this.player.overdrive,

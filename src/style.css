@@ -330,3 +330,22 @@
 .story-banner::after{content:'';position:absolute;left:0;bottom:0;height:2px;width:100%;background:linear-gradient(90deg,var(--cyan),transparent);opacity:.6}
 @media(max-width:760px){.story-banner{top:7%;padding:8px 12px 9px;width:min(330px,82vw)}.story-banner strong{font-size:14px}.story-banner p{font-size:10px;line-height:1.5}}
 
+/* 技能槽（桌面）：居中底排，避免遮挡左右 HUD */
+.skill-bar{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;display:none;gap:9px;z-index:9}
+.skill-slot{position:relative;width:48px;height:48px;border:1px solid #6fe9d855;background:rgba(6,18,15,.86);border-radius:11px;color:#cfeae3;font-size:19px;display:grid;place-items:center;overflow:hidden;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.skill-slot kbd{position:absolute;top:3px;left:5px;font-size:8px;color:#7fae9f;font-family:'Share Tech Mono';letter-spacing:1px}
+.skill-slot .skill-ic{line-height:1}
+.skill-slot .skill-cd{position:absolute;inset:0;background:rgba(2,12,10,.82);display:none;place-items:center;font-size:11px;color:#9fe8d8;font-family:'Share Tech Mono'}
+.skill-slot.cooldown .skill-cd{display:grid}
+.skill-slot::after{content:'';position:absolute;left:0;bottom:0;height:3px;width:var(--p,100%);background:var(--cyan);box-shadow:0 0 8px #54f7d2aa;transition:width .1s linear}
+.skill-slot.cooldown::after{background:#ff7d92}
+
+/* 触屏技能按钮 */
+.mobile-skills{position:absolute;left:50%;transform:translateX(-50%);bottom:196px;display:none;gap:11px;z-index:8}
+.mobile-skill{width:52px;height:52px;border-radius:13px;border:1px solid #54f7d277;background:rgba(7,19,15,.9);color:#cfeae3;font-size:21px;display:grid;place-items:center;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.mobile-skill.cooldown{opacity:.45;border-color:#ff6b6b66}
+.mobile-skill:active{background:rgba(84,247,210,.22)}
+@media(max-width:760px){.skill-bar{display:none!important}.mobile-skills{bottom:206px}}
+@media(orientation:portrait){.mobile-skills{bottom:238px}}
+.ver-tag{margin-left:9px;padding:2px 9px;border:1px solid #54f7d266;border-radius:20px;font-style:normal;font-size:10px;color:#54f7d2;letter-spacing:1px;vertical-align:middle}
+

@@ -147,6 +147,55 @@ try {
   out.fatalDesktop = e.message;
 }
 
+// ============ SKILLS（科技技能卡） ============
+try {
+  const page = await newPage({ width: 1280, height: 800 });
+  await page.goto(url, { waitUntil: 'networkidle' });
+  await page.waitForSelector('#start-button', { timeout: 8000 });
+  await page.click('#start-button');
+  await page.waitForFunction(() => window.game && window.game.wave >= 1, { timeout: 6000 }).catch(() => {});
+  await page.waitForTimeout(300);
+
+  // 真实货架中是否出现技能卡（随机抽样，仅作存在性确认）
+  await page.evaluate(() => { window.game.credits = 9999; window.game.offerUpgrades(); window.game.gotoShop(); });
+  await page.waitForTimeout(400);
+  const shop = await page.evaluate(() => window.game.currentShop.map((s) => s.category));
+  out.skillCardsInShop = shop.filter((c) => c === 'skill').length;
+
+  // 确定性验证：注入一张主动 + 一张被动技能卡，验证购买 / 释放 / 被动生效 / HUD 技能槽
+  await page.evaluate(() => {
+    window.game.credits = 9999;
+    window.game.state = 'upgrade';
+    window.game.currentShop = [
+      { type: 'skill', skillId: 'sk-emp', kind: 'active', icon: '✺', name: '电磁过载', category: 'skill', rarity: 2, price: 10, desc: 'x', cooldown: 18, sold: false, locked: false },
+      { type: 'skill', skillId: 'sk-adaptive', kind: 'passive', icon: '🛡', name: '自适应装甲', category: 'skill', rarity: 2, price: 10, desc: 'x', apply: (g) => { g.player.adaptiveArmor = true; }, sold: false, locked: false },
+    ];
+  });
+  await page.evaluate(() => window.game.buyShopItem(0));
+  await page.waitForTimeout(120);
+  out.activePushed = await page.evaluate(() => window.game.player.skills.map((s) => s.id));
+  out.activeSold = await page.evaluate(() => window.game.currentShop[0].sold);
+  await page.evaluate(() => { window.game.state = 'playing'; });
+  await page.evaluate(() => window.game.activateSkill(0));
+  await page.waitForTimeout(120);
+  out.activeCooldown = await page.evaluate(() => window.game.player.skills[0] ? window.game.player.skills[0].cooldown : -1);
+  out.activeMax = await page.evaluate(() => window.game.player.skills[0] ? window.game.player.skills[0].max : -1);
+  const cd = await page.evaluate(() => window.game.player.skills[0].cooldown);
+  await page.evaluate(() => window.game.activateSkill(0));
+  await page.waitForTimeout(80);
+  out.activeCooldownUnchanged = (await page.evaluate(() => window.game.player.skills[0].cooldown)) <= cd;
+  await page.evaluate(() => window.game.buyShopItem(1));
+  await page.waitForTimeout(120);
+  out.passiveFlagSet = await page.evaluate(() => window.game.player.adaptiveArmor === true);
+  await page.evaluate(() => window.game.updateHUD(true));
+  await page.waitForTimeout(150);
+  out.skillBarVisible = await page.evaluate(() => { const el = document.querySelector('#skill-bar'); return el && getComputedStyle(el).display !== 'none'; });
+  out.skillSlotCount = await page.$$eval('#skill-bar .skill-slot', (e) => e.length);
+  await page.close();
+} catch (e) {
+  out.fatalSkills = e.message;
+}
+
 // ============ MOBILE ============
 try {
   const m = await newPage({ width: 844, height: 390, isMobile: true, hasTouch: true });
@@ -179,6 +228,15 @@ try {
   await m.evaluate(() => document.querySelector('#resume-button').click());
   await m.waitForTimeout(300);
   out.stateResumed = await m.evaluate(() => window.game.state);
+
+  // 技能槽（触屏）：注入一个主动技能并刷新 HUD，验证 #mobile-skills 出现且可点击释放
+  await m.evaluate(() => { window.game.isTouch = true; window.game.player.skills = [{ id: 'sk-barrier', name: '力场护壁', icon: '◇', cooldown: 0, max: 26, kind: 'active' }]; window.game.updateHUD(true); });
+  await m.waitForTimeout(200);
+  out.mobileSkillsVisible = await m.evaluate(() => { const el = document.querySelector('#mobile-skills'); return el && getComputedStyle(el).display !== 'none'; });
+  out.mobileSkillCount = await m.$$eval('#mobile-skills .mobile-skill', (e) => e.length);
+  await m.evaluate(() => document.querySelector('#mobile-skills .mobile-skill').click());
+  await m.waitForTimeout(150);
+  out.mobileSkillActivated = await m.evaluate(() => window.game.player.skills[0] && window.game.player.skills[0].cooldown > 0);
   await m.close();
 } catch (e) {
   out.fatalMobile = e.message;
