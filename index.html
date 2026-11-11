@@ -124,6 +124,7 @@
         <div id="kill-feed" class="kill-feed"></div>
         <div id="announcer" class="announcer"><small></small><strong></strong><p></p></div>
         <div id="crosshair" class="crosshair"><i></i><i></i><i></i><i></i><b></b><span id="red-dot"></span><span id="hitmarker"></span></div>
+        <div id="scope-readout" class="scope-readout"></div>
         <div class="hud-bottom-left"><div class="ability" id="ability-dash"><kbd>Q</kbd><div><strong>相位冲刺</strong><span><i></i></span></div><b class="ability-status">就绪</b></div><div class="ability" id="ability-pulse"><kbd>E</kbd><div><strong>电磁脉冲</strong><span><i></i></span></div><b class="ability-status">就绪</b></div></div>
         <div class="energy-block" id="energy-block">
           <div class="energy-head"><span><kbd>F</kbd> 核心超载</span><b id="overdrive-status">充能 0%</b></div>
@@ -141,6 +142,11 @@
         <div id="cheat-toast" class="cheat-toast"></div>
         <div id="lock-reticle" class="lock-reticle"><i></i><i></i><i></i><i></i><b></b></div>
 
+        <div id="slowmo-vignette" class="slowmo-vignette"></div>
+        <div id="glitch-flash" class="glitch-flash"></div>
+        <div id="combat-banner" class="combat-banner"><small></small><strong></strong><p></p></div>
+        <div id="story-banner" class="story-banner"><small></small><strong></strong><p></p></div>
+
         <div id="mobile-controls" class="mobile-controls">
           <div id="move-stick" class="touch-stick" aria-label="虚拟移动摇杆"><b class="stick-arrow up">▲</b><b class="stick-arrow down">▼</b><b class="stick-arrow left">◀</b><b class="stick-arrow right">▶</b><i></i><span class="stick-label">移动 / MOVE</span></div>
           <div id="look-zone" class="look-zone"></div>
@@ -150,6 +156,8 @@
             <button id="mobile-dash" class="mobile-small dash" aria-label="冲刺">Q</button>
             <button id="mobile-pulse" class="mobile-small pulse" aria-label="脉冲">E</button>
             <button id="mobile-switch" class="mobile-small switch" aria-label="切换武器">⇄</button>
+            <button id="mobile-scope" class="mobile-small scope" aria-label="狙击镜倍率">⌖</button>
+            <button id="mobile-cheat" class="mobile-small cheat" aria-label="越界协议外挂">⚡</button>
             <button id="mobile-overdrive" class="mobile-small overdrive" aria-label="核心超载">F</button>
             <button id="mobile-jump" class="mobile-small jump" aria-label="跳跃">↑</button>
             <button id="mobile-slide" class="mobile-small slide" aria-label="滑铲">⤵</button>
@@ -178,6 +186,8 @@
             <div class="cheat-row"><kbd>STANDDOWN</kbd><span>解除 // 关闭全部外挂</span></div>
             <div class="cheat-row"><kbd>HELP</kbd><span>再次展开本清单</span></div>
           </div>
+          <div class="cheat-btn-hint">手机 / 鼠标可直接点按下方按钮开启外挂（无需键盘）</div>
+          <div id="cheat-buttons" class="cheat-buttons"></div>
           <button id="cheat-close" class="secondary-button wide">关闭清单 <b>`</b></button>
           <small class="cheat-foot">提示：再次输入同一密语可关闭对应外挂；OVERBOUND / STANDDOWN 为总开关。</small>
         </div>
@@ -188,11 +198,16 @@
       </section>
 
       <section id="upgrade-screen" class="screen overlay-screen">
-        <div class="upgrade-wrap"><div class="eyebrow">COMBAT ADAPTATION / AVAILABLE</div><h2>战后补给站<span>.</span></h2><p>波次清除。先选购装备，再选择一项肉鸽强化继续推进。</p>
+        <div class="upgrade-wrap"><div class="eyebrow">COMBAT ADAPTATION / AVAILABLE</div><h2>战后补给站<span>.</span></h2><p>波次清除。先领取一项免费基础强化，再按需采购货架物资，最后确认整备出击。</p>
+          <div class="upgrade-subhead">免费基础强化 · 三选一 <span class="subhead-note">不消耗信用点</span></div>
+          <div id="free-choices" class="free-choices"></div>
           <div class="shop-head"><span>NX 补给网络 // 货架</span><b id="shop-credits">0 CR</b></div>
           <div id="shop-panel" class="shop-panel"></div>
-          <div class="upgrade-subhead">战术模块 · 三选一</div>
-          <div id="upgrade-options" class="upgrade-options"></div><small class="upgrade-hint">按数字键 1—3 快速选择强化并进入下一波</small>
+          <div class="upgrade-actions">
+            <button id="reroll-button" class="secondary-button"><span id="reroll-label">刷新货架</span><i>↻</i></button>
+            <button id="deploy-button" class="primary-button" disabled><span>确认整备 · 出击</span><b>↗</b><i>↗</i></button>
+          </div>
+          <small class="upgrade-hint">按数字键 1—3 快速领取基础强化 · 锁定货架项可在刷新后保留 · 按 Enter 出击</small>
         </div>
       </section>
 

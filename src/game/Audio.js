@@ -107,4 +107,9 @@ export class AudioSystem {
   overdrive() { [330, 440, 660, 880].forEach((f, i) => this.tone(f, 0.45, 0.1, 'sawtooth', f * 1.35, i * 0.06)); this.tone(70, 0.6, 0.18, 'sine', 40); }
   achievement() { [660, 880, 1320].forEach((f, i) => this.tone(f, 0.15, 0.07, 'triangle', f, i * 0.07)); }
   warning() { this.tone(780, 0.12, 0.09, 'square', 520); this.tone(780, 0.12, 0.09, 'square', 520, 0.2); }
+  // —— 绝区零式演出音效 ——
+  break() { this.tone(140, 0.5, 0.22, 'sawtooth', 60); this.noise(0.3, 0.32, 900); this.tone(1200, 0.18, 0.12, 'square', 320); }
+  perfectDodge() { this.tone(900, 0.18, 0.12, 'sine', 1700); this.tone(1500, 0.12, 0.08, 'triangle', 2400, 0.05); this.noise(0.12, 0.1, 5000); }
+  glitch() { this.tone(60, 0.12, 0.16, 'square', 140); this.noise(0.1, 0.14, 2600); }
+  staggerHit() { this.tone(520, 0.05, 0.05, 'square', 360); }
 }

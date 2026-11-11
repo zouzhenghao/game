@@ -106,14 +106,17 @@ const MISSIONS = [
   { id: 'kills', text: '本波击毁 12 个敌人', reward: 150, target: 12 },
 ];
 
-/** 章节故事线：抵达指定波次时推送剧情，波数越长章节越靠后。 */
+/**
+ * 章节故事线：按战役进度里程碑触发（at = 占总波次的百分比），
+ * 这样无论何种难度（10/15/20/25 波）都能看到完整剧情；无尽模式每 5 波循环推进。
+ */
 const CHAPTERS = [
-  { wave: 1, title: '第一章 // 霓虹余烬', text: '02:17，第七区断联。你是唯一还能接入战术网络的「幽灵」。' },
-  { wave: 4, title: '第二章 // 铁潮', text: '机械军团开始成建制推进，前哨站接连失守，补给线被压缩到极限。' },
-  { wave: 7, title: '第三章 // 裂隙回声', text: '裂隙深处传来同源信号——守望者正在召回所有残部。' },
-  { wave: 11, title: '第四章 // 深潜', text: '常规补给断绝，流动商人成了唯一的装备来源。' },
-  { wave: 16, title: '第五章 // 临界', text: '敌方核心开始超载，战场的物理规则正在被改写。' },
-  { wave: 21, title: '终章 // 黎明协议', text: '最后一道防线。摧毁守望者，结束这场没有尽头的夜。' },
+  { at: 0.00, title: '第一章 // 霓虹余烬', text: '02:17，第七区断联。你是唯一还能接入战术网络的「幽灵」。' },
+  { at: 0.22, title: '第二章 // 铁潮', text: '机械军团开始成建制推进，前哨站接连失守，补给线被压缩到极限。' },
+  { at: 0.42, title: '第三章 // 裂隙回声', text: '裂隙深处传来同源信号——守望者正在召回所有残部。' },
+  { at: 0.60, title: '第四章 // 深潜', text: '常规补给断绝，流动商人成了唯一的装备来源。' },
+  { at: 0.80, title: '第五章 // 临界', text: '敌方核心开始超载，战场的物理规则正在被改写。' },
+  { at: 0.96, title: '终章 // 黎明协议', text: '最后一道防线。摧毁守望者，结束这场没有尽头的夜。' },
 ];
 export { DIFFICULTY, MISSIONS, CHAPTERS };
 
@@ -153,6 +156,39 @@ const UPGRADES = [
   { id: 'cryo', icon: '❄', type: 'FIREPOWER', name: '极寒增幅', description: '寒霜减速时间延长 60%，减速强度提升至 65%。', apply: (g) => { g.player.frostDuration = (g.player.frostDuration || 1) * 1.6; g.player.frostSlow = (g.player.frostSlow || 1) * 0.65; } },
   { id: 'frostfield', icon: '✲', type: 'ABILITY', name: '冰封脉冲', description: '电磁脉冲范围内的敌人被减速 60%，持续 2.5 秒。', apply: (g) => { g.player.frostPulse = true; } },
 ];
+
+/**
+ * 每波免费基础强化（土豆兄弟式）：三选一、不花钱，但每次刷新货架需要花信用点。
+ * 这些是基础属性的小幅永久增益，与战后的肉鸽模块（UPGRADES）区分开。
+ */
+const BASE_UPGRADES = [
+  { id: 'b-health', icon: '✚', name: '强化骨架', desc: '最大生命 +20。', apply: (g) => { g.player.maxHealth += 20; g.player.health += 20; } },
+  { id: 'b-shield', icon: '◇', name: '电容矩阵', desc: '最大护盾 +15。', apply: (g) => { g.player.maxShield += 15; g.player.shield += 15; } },
+  { id: 'b-damage', icon: '↟', name: '过热膛线', desc: '全武器伤害 +7%。', apply: (g) => { g.player.damageMultiplier *= 1.07; } },
+  { id: 'b-firerate', icon: '≫', name: '高速循环', desc: '射速 +7%。', apply: (g) => { g.player.fireRateMultiplier *= 1.07; } },
+  { id: 'b-speed', icon: '⌁', name: '伺服腿组', desc: '移动速度 +5%。', apply: (g) => { g.player.speedMultiplier *= 1.05; } },
+  { id: 'b-crit', icon: '✦', name: '弱点解析', desc: '暴击率 +4%。', apply: (g) => { g.player.critChance += 0.04; } },
+  { id: 'b-critdmg', icon: '✷', name: '暴击回路', desc: '暴击伤害 +12%。', apply: (g) => { g.player.critMultiplier += 0.12; } },
+  { id: 'b-ammo', icon: '▤', name: '扩容弹匣', desc: '弹药容量 +10%。', apply: (g) => { g.player.ammoMultiplier *= 1.1; } },
+  { id: 'b-reload', icon: '↻', name: '急速装填', desc: '装填速度 +8%。', apply: (g) => { g.player.reloadMultiplier *= 1.08; } },
+  { id: 'b-pulse', icon: '◎', name: '脉冲核心', desc: '脉冲伤害 +10 / 半径 +1。', apply: (g) => { g.player.pulseDamage += 10; g.player.pulseRadius += 1; } },
+  { id: 'b-execute', icon: '⌖', name: '处决协议', desc: '处决加成 +8%。', apply: (g) => { g.player.executeBonus += 0.08; } },
+  { id: 'b-pickup', icon: '⊙', name: '拾取场', desc: '拾取范围 +0.2。', apply: (g) => { g.player.pickupRadius += 0.2; } },
+];
+
+/** 货架上的付费武器附件 / 战术模块（稀有度按波次解锁，模仿土豆兄弟分层）。 */
+const SHOP_MODS = [
+  { id: 'm-mag', icon: '▤', name: '扩容弹匣', rarity: 1, price: 140, desc: '全武器弹药容量 +15%。', apply: (g) => { g.player.ammoMultiplier *= 1.15; } },
+  { id: 'm-grip', icon: '≫', name: '稳定握把', rarity: 1, price: 160, desc: '射速 +10%。', apply: (g) => { g.player.fireRateMultiplier *= 1.1; } },
+  { id: 'm-spring', icon: '↻', name: '高速弹簧', rarity: 1, price: 150, desc: '装填速度 +18%。', apply: (g) => { g.player.reloadMultiplier *= 1.18; } },
+  { id: 'm-barrel', icon: '↟', name: '精密枪管', rarity: 2, price: 190, desc: '全武器伤害 +12%。', apply: (g) => { g.player.damageMultiplier *= 1.12; } },
+  { id: 'm-ammo', icon: '✦', name: '穿甲弹头', rarity: 2, price: 210, desc: '暴击率 +6%。', apply: (g) => { g.player.critChance += 0.06; } },
+  { id: 'm-over', icon: 'ϟ', name: '过载膛线', rarity: 3, price: 280, desc: '伤害 +25%（射速 -5%）。', apply: (g) => { g.player.damageMultiplier *= 1.25; g.player.fireRateMultiplier *= 0.95; } },
+  { id: 'm-crit', icon: '✷', name: '暴击核心', rarity: 4, price: 320, desc: '暴击伤害 +25%。', apply: (g) => { g.player.critMultiplier += 0.25; } },
+];
+
+/** 稀有度解锁波次：1 常驻，2 自第 2 波，3 自第 4 波，4 自第 8 波。 */
+const MOD_RARITY_UNLOCK = { 1: 0, 2: 2, 3: 4, 4: 8 };
 
 export class Game {
   constructor(canvas, radar, callbacks) {
@@ -222,6 +258,7 @@ export class Game {
     this.weaponRecoil = 0;
     this.muzzleTimer = 0;
     this.currentUpgradeChoices = [];
+    this.freePickIndex = -1;
     this.difficulty = DIFFICULTY.standard;
     this.clearedContent = localStorage.getItem('nexus-cleared') === '1';  // 通关基础 10 波后解锁的内容
     this.mission = null;
@@ -301,6 +338,8 @@ export class Game {
     this.weaponRoot.add(model.group);
     this.weaponModel = model.group;
     this.weaponParts = model;
+    this.currentScopeType = model.scopeType || 'reddot';
+    this.scopeReticle = model.reticle || null;
     this.muzzleLight.position.set(0, 0.02, model.muzzleZ + 0.12);
   }
 
@@ -320,19 +359,20 @@ export class Game {
       parts.flash.rotation.z += dt * 18;
     }
     if (parts.coils) parts.coils.children.forEach((ring, i) => { ring.rotation.z += dt * (i % 2 ? -2.2 : 2.2); });
-    if (parts.optics) {
-      // 瞄准过渡：镜身微降、红点由暗转亮并与屏幕准星重合
-      parts.optics.position.y = lerp(parts.optics.position.y, 0.15 - (this.aimBlend || 0) * 0.035, 1 - Math.exp(-dt * 10));
+    // 瞄具：镜身随瞄准微降；红点随瞄准增亮；倍率镜分划十字随瞄准显形
+    if (parts.optics) parts.optics.position.y = lerp(parts.optics.position.y, (parts.redDot ? 0.15 : 0.17) - (this.aimBlend || 0) * 0.035, 1 - Math.exp(-dt * 10));
+    if (parts.redDot) {
       parts.redDot.scale.setScalar(0.8 + (this.aimBlend || 0) * 0.8);
       parts.redDot.material.color.setHex(this.aimBlend > 0.45 ? 0xff2038 : 0xa83344);
     }
+    if (this.scopeReticle) this.scopeReticle.visible = this.aimBlend > 0.25;
   }
 
   resetPlayer() {
     this.player = {
       position: new THREE.Vector3(0, 1.7, 22), velocity: new THREE.Vector3(), health: 100, maxHealth: 100, shield: 50, maxShield: 50,
       damageMultiplier: 1, fireRateMultiplier: 1, reloadMultiplier: 1, speedMultiplier: 1, ammoMultiplier: 1,
-      dashCooldown: 0, dashMax: 5, dashTime: 0, invulnerable: 0, pulseCooldown: 0, pulseMax: 12, pulseRadius: 12, pulseDamage: 75,
+      dashCooldown: 0, dashMax: 5, dashTime: 0, dashDuration: 0.19, perfectWindow: 0.13, _perfectUsed: false, invulnerable: 0, pulseCooldown: 0, pulseMax: 12, pulseRadius: 12, pulseDamage: 75,
       shieldRegen: 9, shieldDelay: 4.5, lastDamage: 0, killHeal: 0,
       jumpY: 0, jumpVel: 0, grounded: true, slideTime: 0, slideCooldown: 0, slideDir: null,
       critChance: 0.08, critMultiplier: 1.75, executeBonus: 1, executeThreshold: 0.35,
@@ -357,6 +397,7 @@ export class Game {
     this.combo = 1;
     this.comboTimer = 0;
     this.wave = 0;
+    this.currentChapter = -1;
     this.elapsed = 0;
     this.nextWaveTimer = 0;
     this.spawnTimer = 0;
@@ -371,12 +412,15 @@ export class Game {
     this.waveDamageTaken = 0;
     this.dashActive = false;
     this.aimBlend = 0;
+    this.sniperZoom = 6;
+    this.scopeLevels = [3, 6, 10];
     this.sprintBlend = 0;
     this.slideBlend = 0;
     this.landKick = 0;
     this.hitCombo = 0;
     this.hitComboTimer = 0;
     this.hitStop = 0;
+    this.slowmo = 0;
     this.mission = null;
     this.missionBonus = 1;
     this.shopDiscount = 1;
@@ -526,6 +570,8 @@ export class Game {
     this.canvas.addEventListener('contextmenu', (event) => event.preventDefault());
     this.canvas.addEventListener('wheel', (event) => {
       if (this.state !== 'playing') return;
+      // 开镜状态下的狙击镜：滚轮调节倍率，不再切枪
+      if (this.aiming && this.currentScopeType === 'sniper') { this.cycleScope(); return; }
       const direction = event.deltaY > 0 ? 1 : -1;
       const total = this.loadout.length;
       if (total < 2) return;
@@ -624,6 +670,8 @@ export class Game {
     bindButton('mobile-slide', () => this.slide());
     bindButton('mobile-overdrive', () => this.activateOverdrive());
     bindButton('mobile-aim', () => { this.aiming = !this.aiming; document.getElementById('mobile-aim')?.classList.toggle('active', this.aiming); });
+    bindButton('mobile-scope', () => this.cycleScope());
+    bindButton('mobile-cheat', () => this.toggleCheatConsole());
     bindButton('mobile-demo', () => this.setDemoMode(!this.demoMode));
   }
 
@@ -650,8 +698,20 @@ export class Game {
     this.spawnQueue = [];
     this.assignMission();
     if (this.mode === 'gauntlet') this.waveTimeLeft = 45;
-    const chapter = CHAPTERS.find((entry) => entry.wave === this.wave);
-    if (chapter) this.callbacks.onToast?.(`${chapter.title} // ${chapter.text}`, 5200);
+    // 章节剧情：按战役进度里程碑触发，确保所有难度都能看到完整故事线
+    const chapterTotal = (this.mode === 'campaign' || this.mode === 'gauntlet') ? this.difficulty.waves : 0;
+    let chapterIdx = -1;
+    if (chapterTotal > 0) {
+      chapterIdx = CHAPTERS.reduce((acc, c, i) => (this.wave >= Math.ceil(c.at * chapterTotal) ? i : acc), -1);
+    } else if (this.mode === 'endless') {
+      chapterIdx = Math.min(CHAPTERS.length - 1, Math.floor((this.wave - 1) / 5));
+    } else if (this.wave === 1) {
+      chapterIdx = 0;
+    }
+    if (chapterIdx >= 0 && chapterIdx !== this.currentChapter) {
+      this.currentChapter = chapterIdx;
+      this.callbacks.onStory?.(CHAPTERS[chapterIdx]);
+    }
     // 流动商人在第 3 / 6 / 9 波固定出现；通关后每 5 波额外投放
     if (this.wave === 3 || this.wave === 6 || this.wave === 9 || (this.clearedContent && this.wave % 5 === 0)) this.spawnFieldVendor();
     const diff = this.difficulty;
@@ -721,6 +781,12 @@ export class Game {
       parts: model.dynamic, height: model.height, baseY: model.baseY, weakpoints: model.weakpoints,
     };
     enemy.maxHealth = enemy.health;
+    // 绝区零式「失衡槽」：命中累积失衡值，满槽触发破防（定身 + 受伤加成 + 连携窗口）
+    enemy.stagger = 0;
+    enemy.staggerMax = Math.max(14, enemy.maxHealth * (type === 'boss' ? 0.5 : 0.42));
+    enemy.broken = false;
+    enemy.brokenTimer = 0;
+    enemy.glitchPhase = Math.random() * Math.PI * 2;
     const register = (object) => {
       object.userData.enemy = enemy;
       if (object.isMesh) {
@@ -737,12 +803,20 @@ export class Game {
     const barFill = new THREE.Mesh(new THREE.PlaneGeometry(barWidth, 0.055), new THREE.MeshBasicMaterial({ color: data.color, depthTest: true }));
     barFill.position.z = 0.005;
     barGroup.add(barBack, barFill);
+    // 失衡槽：位于血条下方，命中累积；阈值附近转红预示即将破防
+    const staggerBack = new THREE.Mesh(new THREE.PlaneGeometry(barWidth, 0.042), new THREE.MeshBasicMaterial({ color: 0x101818, transparent: true, opacity: 0.85, depthTest: true }));
+    staggerBack.position.y = -0.13;
+    const staggerFill = new THREE.Mesh(new THREE.PlaneGeometry(barWidth, 0.03), new THREE.MeshBasicMaterial({ color: 0x54f7d2, depthTest: true }));
+    staggerFill.position.set(0, -0.13, 0.005);
+    barGroup.add(staggerBack, staggerFill);
     barGroup.position.y = enemy.height + 0.35;
     barGroup.visible = type === 'boss';
     group.add(barGroup);
     enemy.healthBar = barGroup;
     enemy.barFill = barFill;
     enemy.barHalf = barWidth / 2;
+    enemy.staggerFill = staggerFill;
+    enemy.staggerHalf = barWidth / 2;
     // 怪物细化：脚下能量光环 + 头顶缓旋装甲环，让轮廓与阵营色更清晰（不参与射线命中）
     const haloMaterial = new THREE.MeshBasicMaterial({ color: data.color, transparent: true, opacity: 0.46, toneMapped: false, depthWrite: false });
     const halo = new THREE.Mesh(new THREE.TorusGeometry(enemy.radius * 1.2, 0.026, 5, 24), haloMaterial);
@@ -817,6 +891,25 @@ export class Game {
         if (Math.random() > 0.65) this.spawnParticles(enemy.group.position.clone().add(new THREE.Vector3(0, 1.1, 0)), 0xffc24d, 2, 1.4);
         if (enemy.fuse <= 0) { this.detonateBomber(enemy); continue; }
       }
+      // —— 失衡 / 破防态：定身 + 故障闪烁，期间受到伤害 +60%，并展示失衡槽 ——
+      if (enemy.broken) {
+        enemy.brokenTimer -= dt;
+        enemy.material.emissiveIntensity = 1.3 + Math.sin(this.elapsed * 26 + enemy.glitchPhase) * 1.9;
+        enemy.group.scale.setScalar(1 + Math.sin(this.elapsed * 30 + enemy.glitchPhase) * 0.03);
+        if (enemy.brokenTimer <= 0) { enemy.broken = false; enemy.stagger = 0; enemy.group.scale.setScalar(1); enemy.material.emissiveIntensity = enemy.type === 'boss' ? 1.0 : 0.8; }
+      }
+      // 失衡槽渲染：随命中累积，逼近阈值转红，破防时隐藏
+      if (enemy.staggerFill) {
+        const showBar = enemy.type === 'boss' || enemy.health < enemy.maxHealth || (enemy.stagger > 0 && !enemy.broken);
+        enemy.healthBar.visible = showBar;
+        if (showBar) {
+          const sr = clamp(enemy.stagger / enemy.staggerMax, 0, 1);
+          enemy.staggerFill.scale.x = sr;
+          enemy.staggerFill.position.x = -(1 - sr) * (enemy.staggerHalf || 0.6);
+          enemy.staggerFill.material.color.setHex(sr > 0.72 ? 0xff4d6d : 0x54f7d2);
+        }
+      }
+      if (enemy.broken) { enemy.healthBar.quaternion.copy(this.camera.quaternion); continue; }
       const toPlayer = playerFlat.clone().sub(new THREE.Vector3(enemy.group.position.x, 0, enemy.group.position.z));
       const distance = toPlayer.length();
       toPlayer.normalize();
@@ -1134,7 +1227,12 @@ export class Game {
     }
     this.camera.rotation.set(this.pitch, this.yaw, 0);
     const baseFov = 72 + this.sprintBlend * 6 + this.slideBlend * 8;
-    const targetFov = lerp(baseFov, this.weaponIndex === 2 ? 42 : 52, this.aimBlend);
+    // 瞄具决定开镜倍率：红点 1.25x，3 倍镜 3x，5 倍镜 5x，狙击镜可调（默认 6x）
+    const scopeZoom = this.currentScopeType === 'sniper' ? this.sniperZoom
+      : this.currentScopeType === 'scope5' ? 5
+        : this.currentScopeType === 'scope3' ? 3
+          : 1.25;
+    const targetFov = lerp(baseFov, Math.max(16, baseFov / scopeZoom), this.aimBlend);
     this.camera.fov = lerp(this.camera.fov, targetFov, 1 - Math.exp(-dt * 10));
     this.camera.updateProjectionMatrix();
     this.weaponRecoil = lerp(this.weaponRecoil, 0, 1 - Math.exp(-dt * 13));
@@ -1226,14 +1324,15 @@ export class Game {
     if (action === 'purge') { this.cheatPurge(); this.cheatToast(CHEAT_LABELS.purge + ' 已执行'); return; }
     if (action === 'arsenal') { this.loadout = WEAPONS.map((_, i) => i); this.unlockedWeapon = WEAPONS.length - 1; this.updateHUD(true); this.cheatToast(CHEAT_LABELS.arsenal); this.refreshCheatBadge(); return; }
     if (action === 'recharge') { this.cheatRecharge(); this.cheatToast(CHEAT_LABELS.recharge); this.refreshCheatBadge(); return; }
-    if (action === 'overbound') { Object.keys(this.cheats).forEach((k) => { this.cheats[k] = true; }); this.cheatToast(CHEAT_LABELS.overbound); this.refreshCheatBadge(); return; }
-    if (action === 'standdown') { Object.keys(this.cheats).forEach((k) => { this.cheats[k] = false; }); this.firing = false; this.aimTarget = null; this.updateLockReticle(null); this.cheatToast(CHEAT_LABELS.standdown); this.refreshCheatBadge(); return; }
+    if (action === 'overbound') { Object.keys(this.cheats).forEach((k) => { this.cheats[k] = true; }); this.cheatToast(CHEAT_LABELS.overbound); this.refreshCheatBadge(); this.refreshCheatButtons(); return; }
+    if (action === 'standdown') { Object.keys(this.cheats).forEach((k) => { this.cheats[k] = false; }); this.firing = false; this.aimTarget = null; this.updateLockReticle(null); this.cheatToast(CHEAT_LABELS.standdown); this.refreshCheatBadge(); this.refreshCheatButtons(); return; }
     const was = this.cheats[action];
     this.cheats[action] = !was;
     if (action === 'auto' && was) this.firing = false;
     if (action === 'lock' && was) { this.aimTarget = null; this.updateLockReticle(null); }
     this.cheatToast((this.cheats[action] ? '已激活 // ' : '已解除 // ') + CHEAT_LABELS[action]);
     this.refreshCheatBadge();
+    this.refreshCheatButtons();
   }
 
   // ===== 统一瞄准基础：瞄头线 / 视线遮挡 / 宽容命中 =====
@@ -1297,7 +1396,9 @@ export class Game {
       const along = v.dot(direction);
       if (along <= 0 || along > wallDistance) continue;
       const perpendicular = v.addScaledVector(direction, -along).length();
-      const tolerance = (enemy.radius || 0.6) + 0.4 + (this.missStreak >= 4 ? 0.32 : 0);
+      // 仅保留很小的命中宽容：子弹必须几乎压在敌人身上才算擦中，
+      // 不再随连续落空放大窗口（避免「不开挂也自动锁敌」的强追踪感）。
+      const tolerance = (enemy.radius || 0.6) * 0.45 + 0.07;
       if (perpendicular > tolerance) continue;
       if (!this.hasLineOfSight(origin, aim)) continue;
       if (along < bestAlong) { bestAlong = along; best = enemy; }
@@ -1436,12 +1537,23 @@ export class Game {
     el.classList.add('show');
   }
 
-  /** 唤醒 / 关闭作弊清单面板。 */
+  /** 唤醒 / 关闭作弊清单面板（手机无键盘，靠点按开启）。 */
   toggleCheatConsole(force) {
     const el = document.getElementById('cheat-console');
     if (!el) return;
-    const show = force !== undefined ? force : !el.classList.contains('show');
-    el.classList.toggle('show', show);
+    const show = force !== undefined ? force : !el.classList.contains('active');
+    el.classList.toggle('active', show);
+    if (show) this.refreshCheatButtons();
+  }
+
+  /** 同步作弊面板上的可点按开关高亮状态（键盘 / 点按通用）。 */
+  refreshCheatButtons() {
+    const root = document.getElementById('cheat-buttons');
+    if (!root) return;
+    root.querySelectorAll('[data-cheat-key]').forEach((btn) => {
+      const key = btn.dataset.cheatKey;
+      btn.classList.toggle('active', Boolean(this.cheats[key]));
+    });
   }
 
   /** 顶部作弊提示气泡。 */
@@ -1709,8 +1821,8 @@ export class Game {
 
   getAimAssist(origin, direction) {
     let best = null;
-    let bestAngle = this.isBoard ? 0.2 : 0.12;
-    const maxRange = this.isBoard ? 60 : 45;
+    let bestAngle = this.isBoard ? 0.13 : 0.08;
+    const maxRange = this.isBoard ? 46 : 32;
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.spawnTime > 0 || enemy.phased) continue;
       const aim = this.getAimPoint(enemy);
@@ -1729,6 +1841,7 @@ export class Game {
     if (enemy.dead) return false;
     let final = amount;
     if (this.player.executeBonus > 1 && enemy.health / enemy.maxHealth < this.player.executeThreshold) final *= this.player.executeBonus;
+    if (enemy.broken) final *= 1.6; // 破防态：受到伤害 +60%
     if (meta.critRoll) {
       this.critCount += 1;
       if (this.critCount >= 10) this.unlockAchievement('crit-10');
@@ -1736,13 +1849,18 @@ export class Game {
     if (this.mission?.id === 'crit' && meta.critRoll) this.addMissionProgress();
     if (this.mission?.id === 'combo' && this.hitCombo >= this.mission.target) this.addMissionProgress(this.mission.target);
     enemy.health -= final;
+    // 失衡值累积：暴击 / 重击累积更快；满槽即触发破防（在确认未击杀的前提下）
+    const staggerGain = final * (meta.critical ? 1.7 : 1) * (meta.heavy ? 2 : 1);
+    enemy.stagger = (enemy.stagger || 0) + staggerGain;
+    const willBreak = !enemy.broken && enemy.stagger >= enemy.staggerMax && enemy.health > 0;
     // 绝区零式反馈：连续命中数、短暂顿帧、暴击震屏
     this.hitCombo = (this.hitCombo || 0) + 1;
     this.hitComboTimer = 3.2;
     this.hitStop = Math.max(this.hitStop || 0, meta.critical ? 0.05 : 0.022);
     this.shake = Math.min(1.2, this.shake + (meta.critical ? 0.2 : 0.07));
     enemy.hitTimer = 0.07;
-    enemy.healthBar.visible = true;
+    const damaged = enemy.health < enemy.maxHealth;
+    enemy.healthBar.visible = enemy.type === 'boss' || damaged || (enemy.stagger > 0 && !enemy.broken);
     const ratio = clamp(enemy.health / enemy.maxHealth, 0, 1);
     enemy.barFill.scale.x = ratio;
     enemy.barFill.position.x = -(1 - ratio) * (enemy.barHalf || 0.6);
@@ -1751,6 +1869,7 @@ export class Game {
       this.killEnemy(enemy, direction);
       return true;
     }
+    if (willBreak) this.breakEnemy(enemy, direction);
     return false;
   }
 
@@ -1869,8 +1988,53 @@ export class Game {
     if (this.state !== 'playing' || this.player.dashCooldown > 0 || this.player.dashTime > 0) return;
     this.player.dashCooldown = this.player.dashMax;
     this.player.dashTime = 0.19;
+    this.player.dashDuration = 0.19;
+    this.player._perfectUsed = false;
     this.player.invulnerable = 0.28;
     this.audio.dash();
+  }
+
+  /** 绝区零式失衡突破：定身敌人并开启「连携窗口」（受伤加成 + 慢动作 + 闪屏）。 */
+  breakEnemy(enemy, direction) {
+    if (enemy.dead || enemy.broken) return;
+    enemy.broken = true;
+    enemy.brokenTimer = 4.2;
+    enemy.stagger = enemy.staggerMax;
+    this.shake = Math.min(1.6, this.shake + 0.7);
+    this.hitStop = Math.max(this.hitStop, 0.06);
+    this.triggerSlowmo(0.7);
+    this.audio.break?.();
+    this.callbacks.onBreak?.({ name: enemy.name });
+    this.callbacks.onGlitch?.('strong');
+    const pos = enemy.group.position.clone().add(new THREE.Vector3(0, enemy.height * 0.5, 0));
+    this.spawnParticles(pos, 0xff4d6d, 26, 5);
+    this.createPulseEffect(pos, 0xff4d6d, enemy.radius * 4);
+  }
+
+  /** 绝区零式极限闪避：冲刺前段窗口内被攻击，触发时停反击窗口。 */
+  triggerPerfectDodge(source) {
+    this.triggerSlowmo(1.15);
+    this.audio.perfectDodge?.();
+    this.callbacks.onPerfect?.({});
+    this.callbacks.onGlitch?.('light');
+    this.addEnergy(10);
+    this.spawnParticles(this.player.position.clone().add(new THREE.Vector3(0, -0.6, 0)), 0x54f7d2, 16, 3);
+  }
+
+  /** 时停：放慢整个世界（HUD 不受影响），用于破防与极限闪避的演出。 */
+  triggerSlowmo(duration) {
+    const was = this.slowmo > 0;
+    this.slowmo = Math.max(this.slowmo, duration);
+    if (!was) this.callbacks.onSlowmo?.(true);
+  }
+
+  /** 狙击镜可调倍率：滚轮 / 专用按钮在 3/6/10 倍间循环。 */
+  cycleScope() {
+    if (this.currentScopeType !== 'sniper') return;
+    const idx = (this.scopeLevels.indexOf(this.sniperZoom) + 1) % this.scopeLevels.length;
+    this.sniperZoom = this.scopeLevels[idx];
+    this.callbacks.onToast?.(`狙击镜倍率 // ${this.sniperZoom}×`, 1200);
+    this.audio.ui();
   }
 
   pulse() {
@@ -1985,7 +2149,14 @@ export class Game {
   }
 
   damagePlayer(amount, source) {
-    if (this.state !== 'playing' || this.player.invulnerable > 0 || this.mode === 'training') return;
+    if (this.state !== 'playing' || this.mode === 'training') return;
+    // 极限闪避：冲刺前段窗口内被攻击即触发完美闪避（慢动作 + 闪屏 + 反击窗口），伤害已被冲刺无敌抵消
+    if (this.player.dashTime > 0 && this.player.dashTime > (this.player.dashDuration - this.player.perfectWindow) && !this.player._perfectUsed) {
+      this.player._perfectUsed = true;
+      this.triggerPerfectDodge(source);
+      return;
+    }
+    if (this.player.invulnerable > 0) return;
     if (this.cheats.god) return;
     this.player.lastDamage = 0;
     this.waveDamageTaken += amount;
@@ -2108,56 +2279,123 @@ export class Game {
     this.callbacks.onToast?.(`战场事件 // ${event.text}`, 3600);
   }
 
+  /** 整备页：每波随机 3 个免费基础强化（三选一），刷新货架需花信用点（土豆兄弟式）。 */
   offerUpgrades() {
     this.state = 'upgrade';
     this.firing = false;
     document.exitPointerLock?.();
-    const pool = [...UPGRADES];
-    this.currentUpgradeChoices = [];
-    while (this.currentUpgradeChoices.length < 3) {
-      const index = Math.floor(Math.random() * pool.length);
-      this.currentUpgradeChoices.push(pool.splice(index, 1)[0]);
-    }
-    // 战后补给站：波次结算奖励 + 随机武器/补给货架，首波结束即开放
+    this.currentFreeChoices = this.rollFreeChoices();
+    this.freePicked = false;
+    this.freePickIndex = -1;
     this.credits += 110 + this.wave * 22;
+    this.rerollCount = 0;
+    this.rerollCost = 20 + this.wave * 5;
     this.currentShop = this.generateShop();
-    this.callbacks.onUpgrades({
-      upgrades: this.currentUpgradeChoices,
-      shop: this.currentShop,
-      credits: this.credits,
-      wave: this.wave,
-    });
+    this.callbacks.onUpgrades(this.prepPayload());
     this.callbacks.onState('upgrade');
   }
 
-  /** 每波刷新 3 件未持有武器 + 2 件消耗补给。 */
-  generateShop() {
-    const owned = new Set(this.loadout);
-    const candidates = WEAPONS.map((w, i) => ({ type: 'weapon', weaponIndex: i, name: w.name, category: w.category, price: Math.round(w.price * (this.shopDiscount || 1)), desc: w.desc }))
-      .filter((item) => !owned.has(item.weaponIndex));
+  /** 从 BASE_UPGRADES 中无放回抽取 3 个免费基础强化。 */
+  rollFreeChoices() {
+    const pool = [...BASE_UPGRADES];
     const picks = [];
-    while (picks.length < 3 && candidates.length) picks.push(candidates.splice(Math.floor(Math.random() * candidates.length), 1)[0]);
-    return [...picks,
-      { type: 'repair', name: '纳米修复包', category: 'supply', price: 120, desc: '立即回满生命与护盾。' },
-      { type: 'ammo', name: '弹药补给箱', category: 'supply', price: 90, desc: '全部武器补满备用弹药。' },
-    ].map((item) => ({ ...item, sold: false }));
+    while (picks.length < 3 && pool.length) picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    return picks;
   }
 
+  /** 整备页数据快照，供 UI 渲染。 */
+  prepPayload() {
+    return {
+      freeChoices: this.currentFreeChoices, shop: this.currentShop, credits: this.credits,
+      wave: this.wave, rerollCost: this.rerollCost, freePicked: this.freePicked,
+      freePickIndex: this.freePickIndex,
+    };
+  }
+
+  /** 货架：2 件未持有武器 + 2 件消耗补给 + 1 件武器附件/战术模块，凑足 5 格（刷新时锁定项保留）。 */
+  generateShop(prev) {
+    const owned = new Set(this.loadout);
+    const weaponCandidates = WEAPONS.map((w, i) => ({ type: 'weapon', weaponIndex: i, name: w.name, category: w.category, price: Math.round(w.price * (this.shopDiscount || 1)), desc: w.desc }))
+      .filter((item) => !owned.has(item.weaponIndex));
+    const slots = [];
+    // 武器：最多 2 件
+    while (slots.filter((s) => s.type === 'weapon').length < 2 && weaponCandidates.length) slots.push(weaponCandidates.splice(Math.floor(Math.random() * weaponCandidates.length), 1)[0]);
+    // 补给：固定 2 件
+    slots.push({ type: 'repair', name: '纳米修复包', category: 'supply', price: 120, desc: '立即回满生命与护盾。' });
+    slots.push({ type: 'ammo', name: '弹药补给箱', category: 'supply', price: 90, desc: '全部武器补满备用弹药。' });
+    // 武器附件 / 战术模块：按波次解锁稀有度，至少 1 件，不足 5 格则补足
+    const unlockedMods = SHOP_MODS.filter((m) => this.wave >= (MOD_RARITY_UNLOCK[m.rarity] || 0));
+    while (slots.length < 5) {
+      const mod = unlockedMods.length ? unlockedMods[Math.floor(Math.random() * unlockedMods.length)] : null;
+      if (!mod) break;
+      slots.push({ type: 'mod', modId: mod.id, name: mod.name, icon: mod.icon, rarity: mod.rarity, price: Math.round(mod.price * (this.shopDiscount || 1)), desc: mod.desc });
+    }
+    const items = slots.map((item) => ({ ...item, sold: false, locked: false }));
+    // 刷新时保留上一轮的锁定（未售出）项到原下标
+    if (prev) prev.forEach((old, i) => { if (old.locked && !old.sold && items[i]) items[i] = old; });
+    return items;
+  }
+
+  /** 购买货架物品（武器 / 补给 / 模块）。 */
   buyShopItem(index) {
     const item = this.currentShop?.[index];
-    if (!item || item.sold || this.credits < item.price) return false;
+    if (!item || item.sold || this.credits < item.price || item.locked) return false;
     this.credits -= item.price;
     item.sold = true;
     if (item.type === 'weapon') this.unlockWeapon(item.weaponIndex);
-    else if (item.type === 'repair') {
-      this.player.health = this.player.maxHealth;
-      this.player.shield = this.player.maxShield;
-    } else if (item.type === 'ammo') {
-      this.weaponState.forEach((state, i) => { state.ammo = WEAPONS[i].magazine; state.reserve = WEAPONS[i].reserve; });
-    }
+    else if (item.type === 'repair') { this.player.health = this.player.maxHealth; this.player.shield = this.player.maxShield; }
+    else if (item.type === 'ammo') { this.weaponState.forEach((state, i) => { state.ammo = WEAPONS[i].magazine; state.reserve = WEAPONS[i].reserve; }); }
+    else if (item.type === 'mod') { const mod = SHOP_MODS.find((m) => m.id === item.modId); mod?.apply(this); }
     this.audio.upgrade();
-    this.callbacks.onShop?.({ shop: this.currentShop, credits: this.credits });
+    if (this.state === 'upgrade') this.callbacks.onUpgrades?.(this.prepPayload());
+    else this.callbacks.onShop?.({ shop: this.currentShop, credits: this.credits, standalone: this.state === 'shop' });
     return true;
+  }
+
+  /** 锁定 / 解锁货架物品（刷新时不被替换）。 */
+  lockShopItem(index) {
+    const item = this.currentShop?.[index];
+    if (!item || item.sold) return;
+    item.locked = !item.locked;
+    if (this.state === 'upgrade') this.callbacks.onUpgrades?.(this.prepPayload());
+    else if (this.state === 'shop') this.callbacks.onShop?.({ shop: this.currentShop, credits: this.credits, standalone: true });
+  }
+
+  /** 土豆兄弟式刷新：花费信用点重抽免费强化与货架（保留锁定项）。 */
+  rerollShop() {
+    if (this.state !== 'upgrade' || this.credits < this.rerollCost) { this.audio.empty?.(); return; }
+    this.credits -= this.rerollCost;
+    this.rerollCount += 1;
+    this.rerollCost += 10 + Math.floor(this.wave * 0.5) * 5;
+    this.currentFreeChoices = this.rollFreeChoices();
+    this.freePicked = false;
+    this.freePickIndex = -1;
+    this.currentShop = this.generateShop(this.currentShop);
+    this.audio.upgrade();
+    this.callbacks.onUpgrades?.(this.prepPayload());
+  }
+
+  /** 选择免费基础强化（三选一），选后仍可继续购物 / 刷新。 */
+  chooseFreeUpgrade(index) {
+    if (this.state !== 'upgrade' || this.freePicked || !this.currentFreeChoices[index]) return;
+    this.currentFreeChoices[index].apply(this);
+    this.freePicked = true;
+    this.freePickIndex = index;
+    this.appliedUpgrades.push({ name: this.currentFreeChoices[index].name, icon: this.currentFreeChoices[index].icon });
+    this.audio.upgrade();
+    this.callbacks.onUpgrades?.(this.prepPayload());
+  }
+
+  /** 确认整备、出击下一波（必须先领取一项免费基础强化）。 */
+  deploy() {
+    if (this.state !== 'upgrade' || !this.freePicked) { this.audio.empty?.(); return; }
+    this.state = 'playing';
+    this.waveClearPending = false;
+    this.intermission = true;
+    this.nextWaveTimer = 2.1;
+    this.callbacks.onState('playing');
+    this.callbacks.onAnnounce('整备完成', '下一波即将到来', 'DEPLOY / READY', 1900);
+    this.requestLock();
   }
 
   /** 战场商人：靠近 NPC 时按 G 打开补给站。 */
@@ -2188,18 +2426,8 @@ export class Game {
   }
 
   chooseUpgrade(index) {
-    if (this.state !== 'upgrade' || !this.currentUpgradeChoices[index]) return;
-    const upgrade = this.currentUpgradeChoices[index];
-    upgrade.apply(this);
-    this.appliedUpgrades.push({ name: upgrade.name, icon: upgrade.icon });
-    this.audio.upgrade();
-    this.state = 'playing';
-    this.waveClearPending = false;
-    this.intermission = true;
-    this.nextWaveTimer = 2.1;
-    this.callbacks.onState('playing');
-    this.callbacks.onAnnounce(upgrade.name, '模块安装完成 · 下一波即将到来', 'TACTICAL MODULE / INSTALLED', 1900);
-    this.requestLock();
+    // 兼容键位 1—3：等同于领取免费基础强化（不再自动出击，需手动确认整备）。
+    this.chooseFreeUpgrade(index);
   }
 
   end(victory) {
@@ -2250,6 +2478,7 @@ export class Game {
       health: this.player.health, maxHealth: this.player.maxHealth, shield: this.player.shield, maxShield: this.player.maxShield,
       wave: this.wave, mode: this.mode, enemies: this.enemies.filter((enemy) => !enemy.dead).length + this.spawnQueue.length,
       score: this.score, combo: this.combo, weapon: WEAPONS[this.weaponIndex], weaponIndex: this.weaponIndex,
+      scopeType: this.currentScopeType, sniperZoom: this.sniperZoom, aiming: this.aiming,
       ammo: this.weaponState[this.weaponIndex].ammo, reserve: this.weaponState[this.weaponIndex].reserve,
       reloading: this.reloadTimer > 0, unlockedWeapon: this.unlockedWeapon, dashCooldown: this.player.dashCooldown,
       dashMax: this.player.dashMax, pulseMax: this.player.pulseMax * (this.player.overdrive > 0 ? 0.5 : 1),
@@ -2319,7 +2548,13 @@ export class Game {
     const dt = Math.min(this.clock.getDelta(), 0.05);
     // 命中顿帧：极短时间放慢整个世界以强化打击感（绝区零式 hitstop），HUD 与波次计时不受影响
     if (this.hitStop > 0) this.hitStop = Math.max(0, this.hitStop - dt);
-    const worldDt = this.hitStop > 0 ? dt * 0.22 : dt;
+    let worldDt = this.hitStop > 0 ? dt * 0.22 : dt;
+    // 时停（绝区零式演出）：放慢整个世界，HUD 与波次计时不受影响
+    if (this.slowmo > 0) {
+      this.slowmo = Math.max(0, this.slowmo - dt);
+      worldDt *= 0.34;
+      if (this.slowmo === 0) this.callbacks.onSlowmo?.(false);
+    }
     this.animatedWorld.forEach(({ mesh, speed, axis, update }) => {
       if (update) update(dt, this.menuTime + this.elapsed);
       else if (axis) mesh.rotation[axis] += speed * dt;

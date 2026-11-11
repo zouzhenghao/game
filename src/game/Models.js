@@ -149,6 +149,71 @@ function commonFurniture(b, index) {
 }
 
 /**
+ * 按武器类型生成对应瞄具：红点 / 3 倍 / 5 倍 / 可调狙击镜。
+ * 返回 { group, redDot, reticle }；倍率镜使用分划十字 reticle，红点镜使用 redDot。
+ */
+function buildOptic(type, materials) {
+  const group = new THREE.Group();
+  let redDot = null;
+  let reticle = null;
+  if (type === 'reddot') {
+    const base = new THREE.Mesh(box(0.12, 0.05, 0.18), materials.dark);
+    const hood = new THREE.Mesh(box(0.085, 0.085, 0.022), materials.metal);
+    const glass = new THREE.Mesh(box(0.07, 0.07, 0.006), new THREE.MeshBasicMaterial({ color: 0x2fd8ff, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+    glass.position.z = -0.012;
+    redDot = new THREE.Mesh(sph(0.012, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3350, toneMapped: false }));
+    redDot.position.set(0, 0, -0.02);
+    group.add(base, hood, glass, redDot);
+    group.position.set(0, 0.15, -0.14);
+  } else {
+    const len = type === 'sniper' ? 0.5 : type === 'scope5' ? 0.34 : 0.26;
+    const rad = type === 'sniper' ? 0.06 : 0.05;
+    const tube = new THREE.Mesh(cyl(rad, rad, len, 14), materials.dark);
+    tube.rotation.x = Math.PI / 2;
+    const obj = new THREE.Mesh(cyl(rad * 0.92, rad * 0.92, 0.04, 14), new THREE.MeshBasicMaterial({ color: 0x081418, toneMapped: false }));
+    obj.rotation.x = Math.PI / 2; obj.position.z = -len / 2;
+    const eye = new THREE.Mesh(cyl(rad * 0.92, rad * 0.92, 0.04, 14), new THREE.MeshBasicMaterial({ color: 0x2fd8ff, transparent: true, opacity: 0.22, depthWrite: false, toneMapped: false }));
+    eye.rotation.x = Math.PI / 2; eye.position.z = len / 2;
+    const ring = new THREE.Mesh(torus(rad, 0.01, 5, 16), materials.accent);
+    ring.position.z = -len / 2;
+    const crossV = new THREE.Mesh(box(0.003, rad * 1.35, 0.002), new THREE.MeshBasicMaterial({ color: 0xff4d6d, toneMapped: false }));
+    const crossH = new THREE.Mesh(box(rad * 1.35, 0.003, 0.002), new THREE.MeshBasicMaterial({ color: 0xff4d6d, toneMapped: false }));
+    crossV.position.z = -len / 2 + 0.012; crossH.position.z = -len / 2 + 0.012;
+    reticle = new THREE.Group(); reticle.add(crossV, crossH);
+    group.add(tube, obj, eye, ring, reticle);
+    if (type === 'sniper') {
+      const zoomRing = new THREE.Mesh(torus(rad * 1.06, 0.014, 6, 18), materials.accent);
+      zoomRing.rotation.x = Math.PI / 2;
+      group.add(zoomRing);
+    }
+    group.position.set(0, 0.17, -0.14);
+  }
+  return { group, redDot, reticle };
+}
+
+/**
+ * 每把枪的瞄具类型：手枪配红点，步枪配 3/5 倍镜，狙击配可调倍率镜。
+ * 索引对应 WEAPONS 绝对序号。
+ */
+const SCOPE = [
+  'scope3',   // 0 VX-9 脉冲步枪
+  'reddot',   // 1 SG-12 裂解霰弹
+  'sniper',   // 2 R-01 磁轨
+  'reddot',   // 3 ARC-7 弧光
+  'reddot',   // 4 WN-5 蜂巢导弹
+  'scope3',   // 5 LN-3 寒霜步枪
+  'reddot',   // 6 PX-1 哨兵手枪
+  'reddot',   // 7 PX-2 双生手枪
+  'reddot',   // 8 PX-3 审判手炮
+  'scope3',   // 9 AR-4 破晓步枪
+  'reddot',   // 10 AR-8 蜂刺冲锋枪
+  'scope5',   // 11 AR-9 重锤步枪
+  'sniper',   // 12 SR-2 静默狙击
+  'sniper',   // 13 SR-6 穿云狙击
+  'sniper',   // 14 SR-9 天罚反器材
+];
+
+/**
  * 生成一把第一人称武器。
  * 返回 { group, magazine, bolt, flash, coils, muzzleZ }
  */
@@ -224,15 +289,6 @@ export function createWeaponModel(index) {
     add('accent', cyl(0.062, 0.048, 0.19, 10), [0, 0.015, -1.32], [Math.PI / 2, 0, 0]);
     add('glow', cyl(0.03, 0.03, 0.012, 10), [0, 0.015, -1.42], [Math.PI / 2, 0, 0]);
     for (let i = 0; i < 6; i++) add('dark', box(0.2, 0.014, 0.025), [0, 0.155, -0.62 + i * 0.09]); // 冷却鳍
-    // 长筒瞄准镜
-    add('dark', cyl(0.06, 0.06, 0.46, 12), [0, 0.195, -0.16], [Math.PI / 2, 0, 0]);
-    add('accent', cyl(0.072, 0.072, 0.055, 12), [0, 0.195, -0.4], [Math.PI / 2, 0, 0]);
-    add('accent', cyl(0.072, 0.072, 0.055, 12), [0, 0.195, 0.08], [Math.PI / 2, 0, 0]);
-    add('glass', cyl(0.062, 0.062, 0.008, 12), [0, 0.195, -0.43], [Math.PI / 2, 0, 0]);
-    add('glow', torus(0.055, 0.007, 4, 14), [0, 0.195, -0.435]);
-    add('metal', box(0.045, 0.06, 0.055), [0, 0.15, -0.28]);
-    add('metal', box(0.045, 0.06, 0.055), [0, 0.15, -0.02]);
-    add('glow', box(0.02, 0.012, 0.02), [0, 0.255, 0.0]);
   } else if (visual === 3) {
     // ARC-7 弧光：特斯拉线圈 + 电容翼 + 悬浮晶体
     add('metal', box(0.205, 0.2, 0.62), [0, 0, -0.12]);
@@ -309,9 +365,6 @@ export function createWeaponModel(index) {
     add('dark', cyl(0.036, 0.042, 1.1, 12), [0, 0.01, -0.95], [Math.PI / 2, 0, 0]);
     add('glow', cyl(0.062, 0.062, 0.1, 12), [0, 0.01, -1.48], [Math.PI / 2, 0, 0]);
     for (let i = 0; i < 3; i++) add('dark', box(0.11, 0.012, 0.03), [0, 0.01, -1.28 + i * 0.1]);
-    add('dark', cyl(0.062, 0.062, 0.42, 12), [0, 0.19, -0.3], [Math.PI / 2, 0, 0]);
-    add('glass', cyl(0.055, 0.055, 0.01, 12), [0, 0.19, -0.51], [Math.PI / 2, 0, 0]);
-    add('accent', torus(0.064, 0.011, 5, 16), [0, 0.19, -0.52]);
     for (const side of [-1, 1]) add('dark', box(0.02, 0.36, 0.02), [side * 0.11, -0.24, -0.86], [0, 0, side * 0.25]);
   } else {
     // LN-3 寒霜：低温步枪 —— 细长枪管 + 冰晶枪口 + 侧置冷凝罐 + 散热鳍
@@ -370,23 +423,11 @@ export function createWeaponModel(index) {
   group.add(flash);
 
   // —— 红点全息瞄准镜：全枪系通用，瞄准过渡时红点与准星重合 ——
-  const optics = new THREE.Group();
-  const opticBase = new THREE.Mesh(box(0.13, 0.05, 0.2), materials.dark);
-  const opticTube = new THREE.Mesh(cyl(0.052, 0.052, 0.17, 12), materials.dark);
-  opticTube.rotation.x = Math.PI / 2;
-  opticTube.position.y = 0.075;
-  const opticRim = new THREE.Mesh(torus(0.052, 0.009, 5, 16), materials.accent);
-  opticRim.position.set(0, 0.075, -0.086);
-  const opticGlass = new THREE.Mesh(cyl(0.046, 0.046, 0.006, 12), new THREE.MeshBasicMaterial({ color: 0x2fd8ff, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
-  opticGlass.rotation.x = Math.PI / 2;
-  opticGlass.position.set(0, 0.075, -0.09);
-  const redDot = new THREE.Mesh(sph(0.013, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3350, toneMapped: false }));
-  redDot.position.set(0, 0.075, -0.098);
-  const opticKnob = new THREE.Mesh(cyl(0.026, 0.026, 0.04, 8), materials.accent);
-  opticKnob.position.set(0.088, 0.055, 0.02);
-  opticKnob.rotation.z = Math.PI / 2;
-  optics.add(opticBase, opticTube, opticRim, opticGlass, redDot, opticKnob);
-  optics.position.set(0, 0.15, -0.14);
+  // —— 按武器类型挂载对应瞄具：红点 / 3 倍 / 5 倍 / 可调狙击镜 ——
+  const scopeType = SCOPE[index] || 'reddot';
+  const optic = buildOptic(scopeType, materials);
+  const optics = optic.group;
+  const redDot = optic.redDot;
   group.add(optics);
 
   // 电弧线圈（仅弧光旋转）
@@ -402,7 +443,7 @@ export function createWeaponModel(index) {
   }
 
   group.traverse((child) => { child.frustumCulled = false; child.renderOrder = 10; });
-  return { group, magazine, bolt, flash, coils, muzzleZ, materials, optics, redDot };
+  return { group, magazine, bolt, flash, coils, muzzleZ, materials, optics, redDot, scopeType, reticle: optic.reticle };
 }
 
 /* ------------------------------------------------------------------ *

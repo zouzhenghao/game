@@ -21,6 +21,7 @@ let game;
 let announceTimer;
 let toastTimer;
 let achievementTimer;
+let storyTimer;
 let lastDamageNumber = 0;
 
 const modalTemplates = {
@@ -157,6 +158,11 @@ function updateHUD(data) {
   $('#combo-value').textContent = `× ${data.combo.toFixed(1)}`;
   $('#weapon-name').innerHTML = data.weapon.label;
   $('#weapon-class').textContent = data.weapon.className;
+  const scopeEl = $('#scope-readout');
+  if (scopeEl) {
+    if (data.aiming && data.scopeType === 'sniper') { scopeEl.textContent = `${data.sniperZoom}×`; scopeEl.classList.add('visible'); }
+    else scopeEl.classList.remove('visible');
+  }
   $('#ammo-value').textContent = pad(data.ammo);
   $('#reserve-value').textContent = data.reserve;
   $('#reload-hint').classList.toggle('visible', data.ammo === 0 || data.reloading);
@@ -221,6 +227,44 @@ function toast(message, duration = 1800) {
   $('#interact-toast').textContent = message;
   $('#interact-toast').classList.add('active');
   toastTimer = setTimeout(() => $('#interact-toast').classList.remove('active'), duration);
+}
+
+/** 剧情档案横幅：每进入新章节时弹出，独立于战斗提示，确保剧情清晰可读。 */
+function showStory(chapter) {
+  clearTimeout(storyTimer);
+  const element = $('#story-banner');
+  if (!element || !chapter) return;
+  element.querySelector('small').textContent = '剧情 // STORY LOG';
+  element.querySelector('strong').textContent = chapter.title;
+  element.querySelector('p').textContent = chapter.text;
+  element.classList.remove('active');
+  void element.offsetWidth;
+  element.classList.add('active');
+  storyTimer = setTimeout(() => element.classList.remove('active'), 6500);
+}
+
+/** 绝区零式横幅：失衡突破 / 极限闪避。 */
+function combatBanner(kind, small, strongText, paragraph) {
+  const element = $('#combat-banner');
+  element.className = `combat-banner ${kind}`;
+  element.querySelector('small').textContent = small;
+  element.querySelector('strong').textContent = strongText;
+  element.querySelector('p').textContent = paragraph;
+  void element.offsetWidth;
+  element.classList.add('show');
+}
+
+/** 绝区零式故障闪屏：strong（破防）/ light（极限闪避）。 */
+function glitchFlash(level = 'light') {
+  const element = $('#glitch-flash');
+  element.className = 'glitch-flash';
+  void element.offsetWidth;
+  element.classList.add(level);
+}
+
+/** 时停暗角开关。 */
+function setSlowmo(active) {
+  $('#slowmo-vignette').classList.toggle('active', active);
 }
 
 function showAchievement(achievement) {
@@ -288,21 +332,48 @@ function renderShop(shop, credits, containerId, creditsId) {
   const container = $(containerId);
   if (!container || !shop) return;
   if ($(creditsId)) $(creditsId).textContent = `${Math.floor(credits)} CR`;
-  container.innerHTML = shop.map((item, index) => `
-    <button class="shop-item${item.sold ? ' sold' : ''}" data-shop="${index}" ${item.sold || credits < item.price ? 'disabled' : ''}>
-      <small>${item.category === 'supply' ? '战场补给' : WEAPON_CATEGORY_LABEL[item.category] || '武器'}</small>
-      <strong>${item.name}</strong><p>${item.desc}</p><b>${item.sold ? '已购入' : `${item.price} CR`}</b>
-    </button>`).join('');
+  container.innerHTML = shop.map((item, index) => {
+    const disabled = item.sold || credits < item.price;
+    const catLabel = item.category === 'supply' ? '战场补给' : (WEAPON_CATEGORY_LABEL[item.category] || '武器');
+    const rarityBadge = item.rarity ? `<span class="rarity-badge rarity-${item.rarity}">${'◆'.repeat(item.rarity)} R${item.rarity}</span>` : '';
+    const lockBtn = item.sold ? '' : `<button class="lock-btn${item.locked ? ' locked' : ''}" data-lock="${index}" title="锁定后刷新不替换">${item.locked ? '🔒' : '🔓'}</button>`;
+    return `<div class="shop-cell">
+      <button class="shop-item${item.sold ? ' sold' : ''}${item.locked ? ' locked' : ''}" data-shop="${index}" ${disabled ? 'disabled' : ''}>
+        <small>${catLabel}${rarityBadge}</small>
+        <strong>${item.name}</strong><p>${item.desc}</p><b>${item.sold ? '已购入' : `${item.price} CR`}</b>
+      </button>${lockBtn}
+    </div>`;
+  }).join('');
   container.querySelectorAll('[data-shop]').forEach((button) => button.addEventListener('click', () => game.buyShopItem(Number(button.dataset.shop))));
+  container.querySelectorAll('[data-lock]').forEach((button) => button.addEventListener('click', (event) => { event.stopPropagation(); game.lockShopItem(Number(button.dataset.lock)); }));
 }
 
 function showUpgrades(payload) {
-  const { upgrades, shop, credits } = payload;
-  $('#upgrade-options').innerHTML = upgrades.map((upgrade, index) => `
-    <button class="upgrade-card" data-upgrade="${index}"><span class="upgrade-number">0${index + 1}</span><div class="upgrade-icon">${upgrade.icon}</div><small>${upgrade.type}</small><h3>${upgrade.name}</h3><p>${upgrade.description}</p><b>安装模块 ↗</b></button>`).join('');
-  $$('[data-upgrade]').forEach((button) => button.addEventListener('click', () => game.chooseUpgrade(Number(button.dataset.upgrade))));
+  const { freeChoices, shop, credits, rerollCost, freePicked, freePickIndex } = payload;
+  // 免费基础强化 · 三选一（不消耗信用点）
+  $('#free-choices').innerHTML = freeChoices.map((up, index) => {
+    const picked = freePicked && freePickIndex === index;
+    const dimmed = freePicked && freePickIndex !== index;
+    return `<button class="free-card${picked ? ' picked' : ''}${dimmed ? ' dimmed' : ''}" data-free="${index}" ${freePicked && !picked ? 'disabled' : ''}>
+      <span class="free-num">0${index + 1}</span>
+      <div class="free-icon">${up.icon}</div>
+      <h3>${up.name}</h3>
+      <p>${up.desc}</p>
+      ${picked ? '<b class="free-done">已领取 ✓</b>' : '<b class="free-pick">领取 ↗</b>'}
+    </button>`;
+  }).join('');
+  $$('[data-free]').forEach((button) => button.addEventListener('click', () => game.chooseFreeUpgrade(Number(button.dataset.free))));
+  // 货架（整备页只渲染主货架面板）
   renderShop(shop, credits, '#shop-panel', '#shop-credits');
-  renderShop(shop, credits, '#shop-options', '#field-shop-credits');
+  // 刷新按钮：花费信用点重抽（按可负担性禁用）
+  const rerollBtn = $('#reroll-button');
+  if (rerollBtn) {
+    $('#reroll-label').textContent = `刷新货架 · ${Math.floor(rerollCost)} CR`;
+    rerollBtn.disabled = credits < rerollCost;
+  }
+  // 出击按钮：须先领取一项免费基础强化
+  const deployBtn = $('#deploy-button');
+  if (deployBtn) deployBtn.disabled = !freePicked;
 }
 
 function showEnd(data) {
@@ -368,6 +439,11 @@ game = new Game($('#game-canvas'), $('#radar'), {
   onBuild: showBuild,
   onAchievement: showAchievement,
   onDamageNumber: showDamageNumber,
+  onBreak: ({ name }) => combatBanner('break', 'STAGGER / BREAK', '失衡突破', `${name} 被击溃 · 连携窗口开启`),
+  onPerfect: () => combatBanner('perfect', 'PERFECT DODGE', '极限闪避', '完美时机 · 时停反击窗口'),
+  onGlitch: (level) => glitchFlash(level),
+  onSlowmo: (active) => setSlowmo(active),
+  onStory: (chapter) => showStory(chapter),
   onDemo: (active) => {
     $('#board-badge').classList.toggle('demo', active);
     $('#board-demo-state').textContent = active ? '自动演示中' : '手动操作';
@@ -381,8 +457,43 @@ window.nexusGame = game;
 // 越界协议 // OVERBOUND 作弊清单面板关闭
 $('#cheat-close').addEventListener('click', () => game.toggleCheatConsole(false));
 $('#shop-close').addEventListener('click', () => game.closeShopStandalone());
+// 整备页：刷新货架 / 确认整备出击
+if ($('#reroll-button')) $('#reroll-button').addEventListener('click', () => game.rerollShop());
+if ($('#deploy-button')) $('#deploy-button').addEventListener('click', () => game.deploy());
 // 点击作弊清单空白处也可关闭（仅当点击的是遮罩本身）
 $('#cheat-console').addEventListener('click', (event) => { if (event.target === $('#cheat-console')) game.toggleCheatConsole(false); });
+
+// 作弊面板：手机 / 鼠标可直接点按的开挂按钮（无需键盘输入密语）
+function buildCheatButtons() {
+  const root = document.getElementById('cheat-buttons');
+  if (!root) return;
+  const toggles = [
+    { code: 'lockon', key: 'lock', label: '锁头', desc: 'LOCKON' },
+    { code: 'autofire', key: 'auto', label: '自动射击', desc: 'AUTOFIRE' },
+    { code: 'godmode', key: 'god', label: '无敌', desc: 'GODMODE' },
+    { code: 'infinity', key: 'ammo', label: '无限弹药', desc: 'INFINITY' },
+    { code: 'xray', key: 'wall', label: '透视', desc: 'XRAY' },
+    { code: 'timeslip', key: 'slow', label: '子弹时间', desc: 'TIMESLIP' },
+  ];
+  const actions = [
+    { code: 'purge', label: '清场', desc: 'PURGE' },
+    { code: 'arsenal', label: '全武器', desc: 'ARSENAL' },
+    { code: 'recharge', label: '回满', desc: 'RECHARGE' },
+    { code: 'overbound', label: '协议全开', desc: 'OVERBOUND' },
+    { code: 'standdown', label: '解除全部', desc: 'STANDDOWN' },
+  ];
+  root.innerHTML =
+    '<div class="cheat-btn-group"><span class="cheat-btn-label">切换类 // TOGGLE</span><div class="cheat-btn-grid">' +
+    toggles.map((t) => `<button class="cheat-btn" data-cheat="${t.code}" data-cheat-key="${t.key}"><b>${t.label}</b><small>${t.desc}</small></button>`).join('') +
+    '</div></div>' +
+    '<div class="cheat-btn-group"><span class="cheat-btn-label">指令类 // ACTION</span><div class="cheat-btn-grid">' +
+    actions.map((a) => `<button class="cheat-btn action" data-cheat="${a.code}"><b>${a.label}</b><small>${a.desc}</small></button>`).join('') +
+    '</div></div>';
+  root.querySelectorAll('[data-cheat]').forEach((btn) => {
+    btn.addEventListener('click', () => game.applyCheat(btn.dataset.cheat));
+  });
+}
+buildCheatButtons();
 
 
 $('#start-button').addEventListener('click', () => start(selectedMode));
@@ -405,8 +516,9 @@ if (localStorage.getItem('nexus-audio') === '0') {
 
 document.addEventListener('keydown', (event) => {
   if (event.code === 'Escape' && $('#modal-backdrop').classList.contains('active')) closeModal();
-  if ($('#upgrade-screen').classList.contains('active') && ['Digit1', 'Digit2', 'Digit3'].includes(event.code)) {
-    game.chooseUpgrade(Number(event.code.slice(-1)) - 1);
+  if ($('#upgrade-screen').classList.contains('active')) {
+    if (['Digit1', 'Digit2', 'Digit3'].includes(event.code)) game.chooseFreeUpgrade(Number(event.code.slice(-1)) - 1);
+    else if (event.code === 'Enter') game.deploy();
   }
 });
 

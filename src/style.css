@@ -34,7 +34,7 @@
 .lock-reticle b{position:absolute;inset:14px;border:1px solid #ff4d6d;border-radius:50%;opacity:.8}
 .cheat-console{background:transparent;backdrop-filter:none;pointer-events:none;align-items:flex-start;justify-content:center;padding-top:7vh}
 .cheat-console.active{pointer-events:none}
-.cheat-card{text-align:left;pointer-events:auto;width:min(580px,93vw);padding:30px 34px;background:linear-gradient(150deg,#10060c,#07030a);border:1px solid #ff4d6d55;box-shadow:0 30px 100px #000a,0 0 40px #ff4d6d22;position:relative}
+.cheat-card{text-align:left;pointer-events:auto;width:min(580px,93vw);max-height:86vh;overflow:auto;padding:30px 34px;background:linear-gradient(150deg,#10060c,#07030a);border:1px solid #ff4d6d55;box-shadow:0 30px 100px #000a,0 0 40px #ff4d6d22;position:relative}
 .cheat-card:before{content:'';position:absolute;left:-1px;top:-1px;width:35px;height:2px;background:#ff4d6d}
 .cheat-card:after{content:'';position:absolute;right:-1px;bottom:-1px;width:35px;height:2px;background:#ff4d6d}
 .cheat-card .eyebrow span{border-color:#ff4d6d55;color:#ff7d92}
@@ -47,6 +47,21 @@
 .cheat-foot{display:block;margin-top:10px;font-size:9px;color:#a06b78}
 .cheat-card .secondary-button{border-color:#ff4d6d55;color:#ff9bb0}
 .cheat-card .secondary-button:hover{border-color:#ff4d6d;color:#fff}
+.cheat-btn-hint{font-size:9px;color:#c98aa0;letter-spacing:1px;margin:4px 0 12px;border-top:1px dashed #ff4d6d33;padding-top:10px}
+.cheat-buttons{display:flex;flex-direction:column;gap:14px;margin-bottom:16px}
+.cheat-btn-group{display:flex;flex-direction:column;gap:7px}
+.cheat-btn-label{font-family:'Share Tech Mono';font-size:9px;letter-spacing:2px;color:#ff7d92;opacity:.8}
+.cheat-btn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cheat-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:11px 6px;background:#1c0c16cc;border:1px solid #ff4d6d33;border-radius:8px;transition:.18s;pointer-events:auto}
+.cheat-btn b{font-size:13px;color:#ffd6de;letter-spacing:1px;font-weight:600}
+.cheat-btn small{font-family:'Share Tech Mono';font-size:8px;color:#c98aa0;letter-spacing:1px}
+.cheat-btn:hover{border-color:#ff4d6d;background:#2a0f1ccc}
+.cheat-btn.active{border-color:#54f7d2;background:#0c211f;box-shadow:0 0 16px #54f7d244,inset 0 0 18px #54f7d212}
+.cheat-btn.active b{color:var(--cyan)}
+.cheat-btn.active small{color:#7fe9d2}
+.cheat-btn.action{grid-column:span 1}
+.cheat-btn.action b{font-size:12px}
+.cheat-btn.action:hover{border-color:#ffd45c;background:#2a1f0fcc}
 @keyframes cheatIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 @keyframes lockPulse{0%,100%{opacity:.6}50%{opacity:1}}
 @media(max-width:760px){.cheat-badge{top:8px;padding:5px 10px;gap:5px}.cheat-row{flex-direction:column;align-items:flex-start;gap:4px}.cheat-row kbd{min-width:0}}
@@ -166,6 +181,34 @@
 .weapon-silhouette.special{color:#ff7a3d99;background:linear-gradient(135deg,#ff7a3d11,transparent);border-color:#ff7a3d22}
 @media(max-width:760px){.shop-panel,.shop-card .shop-panel{grid-template-columns:repeat(2,1fr)}.loadout-picker{gap:4px}.start-weapon-chip{padding:6px 8px;font-size:10px}.start-weapon-chip small{display:none}}
 
+/* ===== 土豆兄弟式整备：免费三选一 + 货架锁定/稀有度 + 刷新/出击 ===== */
+.free-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px}
+.free-card{position:relative;text-align:left;padding:14px 14px 12px;min-height:122px;background:#0a221ecc;border:1px solid #54f7d23a;color:#c9e6dd;cursor:pointer;transition:.18s;display:flex;flex-direction:column;gap:5px}
+.free-card:hover:not(:disabled){border-color:var(--cyan);background:#0d3330e6;transform:translateY(-2px)}
+.free-card .free-num{font-family:'Share Tech Mono',monospace;font-size:11px;color:#6e9a8f;letter-spacing:2px}
+.free-card .free-icon{font-size:26px;color:var(--cyan);line-height:1;margin:2px 0}
+.free-card h3{margin:0;font-size:15px;letter-spacing:1px;color:#e2fff5}
+.free-card p{flex:1;margin:4px 0 0;font-size:11px;line-height:1.65;color:#90aaa4}
+.free-card .free-pick{font-family:'Share Tech Mono',monospace;font-size:11px;color:#ffd45c}
+.free-card.picked{border-color:#7dff9c;background:#0e2a22e6}
+.free-card.picked .free-done{font-family:'Share Tech Mono',monospace;font-size:11px;color:#7dff9c}
+.free-card.dimmed{opacity:.4}
+.free-card:disabled{cursor:not-allowed}
+.upgrade-actions{display:flex;gap:12px;margin-top:8px}
+.upgrade-actions .primary-button,.upgrade-actions .secondary-button{flex:1}
+.upgrade-actions .primary-button[disabled],.upgrade-actions .secondary-button[disabled]{opacity:.4;cursor:not-allowed}
+.subhead-note{color:#6e9a8f;font-size:10px;margin-left:6px;letter-spacing:1px}
+.shop-cell{position:relative;display:flex}
+.shop-cell .shop-item{flex:1}
+.lock-btn{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:5px;background:#05201cbb;border:1px solid #54f7d233;color:#9fd8c4;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:2}
+.lock-btn.locked{background:#3a2a0c;border-color:#ffd45c66;color:#ffd45c}
+.rarity-badge{margin-left:6px;font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;padding:1px 4px;border-radius:3px;vertical-align:middle}
+.rarity-1{background:#1c3b34;color:#7dff9c;border:1px solid #7dff9c44}
+.rarity-2{background:#15293f;color:#9fd8ff;border:1px solid #9fd8ff44}
+.rarity-3{background:#2a1c3f;color:#c89bff;border:1px solid #c89bff44}
+.rarity-4{background:#3a2410;color:#ffd45c;border:1px solid #ffd45c66}
+@media(max-width:760px){.free-choices{grid-template-columns:1fr}.shop-cell .lock-btn{top:4px;right:4px}}
+
 /* ===== V1.0 :: 限时歼灭 / 任务 HUD / 解锁横幅 ===== */
 .gauntlet-timer{display:block;font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:2px;color:#ffd45c;margin-top:2px}
 .gauntlet-timer:empty{display:none}
@@ -207,3 +250,60 @@
   .hero-actions .primary-button{height:52px}
   .hero-actions .secondary-button{height:48px}
 }
+
+/* ===== 绝区零式演出：时停暗角 / 故障闪屏 / 失衡·极限闪避横幅 ===== */
+.slowmo-vignette{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;transition:opacity .18s ease;
+  background:radial-gradient(ellipse at center,rgba(40,10,60,0) 38%,rgba(40,10,60,.55) 100%),
+             linear-gradient(115deg,rgba(120,40,200,.08),rgba(40,200,255,.08));}
+.slowmo-vignette.active{opacity:1;animation:slowmoPulse 1.1s ease-in-out infinite}
+@keyframes slowmoPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+.glitch-flash{position:fixed;inset:0;z-index:7;pointer-events:none;opacity:0;mix-blend-mode:screen;
+  background:repeating-linear-gradient(0deg,rgba(255,60,90,.0) 0px,rgba(255,60,90,.0) 2px,rgba(120,255,240,.0) 3px,rgba(120,255,240,.0) 5px);}
+.glitch-flash.strong{animation:glitchStrong .42s steps(2) 1}
+.glitch-flash.light{animation:glitchLight .3s steps(2) 1}
+@keyframes glitchStrong{
+  0%{opacity:0;background:repeating-linear-gradient(0deg,rgba(255,60,90,.0) 0,rgba(255,60,90,.0) 2px,rgba(120,255,240,.0) 3px,rgba(120,255,240,.0) 5px)}
+  20%{opacity:1;background:repeating-linear-gradient(0deg,rgba(255,60,90,.5) 0,rgba(255,60,90,.5) 3px,rgba(120,255,240,.5) 4px,rgba(120,255,240,.5) 7px);transform:translateX(-6px)}
+  45%{transform:translateX(5px) skewX(-2deg)}
+  70%{opacity:.8;transform:translateX(-3px)}
+  100%{opacity:0;transform:none}
+}
+@keyframes glitchLight{
+  0%{opacity:0}
+  30%{opacity:.7;background:repeating-linear-gradient(0deg,rgba(120,255,240,.35) 0,rgba(120,255,240,.35) 2px,rgba(255,60,90,.3) 3px,rgba(255,60,90,.3) 5px);transform:translateX(3px)}
+  100%{opacity:0;transform:none}
+}
+.combat-banner{position:fixed;left:50%;top:22%;transform:translate(-50%,-50%) scale(.7);z-index:8;pointer-events:none;
+  text-align:center;opacity:0;font-family:'Barlow Condensed','Share Tech Mono',sans-serif;
+  text-shadow:0 4px 24px #000,0 0 30px currentColor;transition:none}
+.combat-banner.show{animation:combatBanner 1.5s cubic-bezier(.16,1,.3,1) forwards}
+.combat-banner small{display:block;font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:6px;opacity:.9}
+.combat-banner strong{display:block;font-size:58px;font-style:italic;font-weight:800;line-height:1;letter-spacing:1px;margin:4px 0}
+.combat-banner p{margin:0;font-size:15px;letter-spacing:3px;font-family:'Noto Sans SC',sans-serif;opacity:.9}
+.combat-banner.break{color:#ff5d77}
+.combat-banner.perfect{color:#54f7d2}
+.scope-readout{position:fixed;left:50%;top:15%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;
+  font-family:'Share Tech Mono',monospace;font-size:22px;letter-spacing:3px;color:#7df0ff;
+  text-shadow:0 0 12px #54f7d2aa,0 0 4px #000;opacity:0;transition:opacity .15s linear}
+.scope-readout.visible{opacity:1}
+.mobile-small.scope{color:#7df0ff;border-color:#54f7d288}
+.mobile-small.cheat{left:150px;bottom:226px;color:#ff7d92;border-color:#ff4d6d66;font-size:16px}.mobile-small.cheat.active{background:#ff4d6d33;box-shadow:0 0 14px #ff4d6d66}
+@media(max-width:760px){.scope-readout{font-size:18px}}
+@keyframes combatBanner{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}
+  14%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
+  28%{transform:translate(-50%,-50%) scale(1)}
+  78%{opacity:1}
+  100%{opacity:0;transform:translate(-50%,-58%) scale(.98)}
+}
+@media(max-width:760px){.combat-banner strong{font-size:40px}.combat-banner small{font-size:10px}.combat-banner p{font-size:12px}}
+
+/* ===== 剧情档案横幅：进入新章节时弹出 ===== */
+.story-banner{position:fixed;left:50%;top:11%;transform:translate(-50%,-18px);z-index:9;width:min(640px,90vw);padding:16px 22px 18px;background:linear-gradient(135deg,rgba(7,22,28,.96),rgba(4,12,16,.92));border:1px solid #54f7d255;border-left:3px solid var(--cyan);box-shadow:0 18px 60px rgba(0,0,0,.55),inset 0 0 30px rgba(84,247,210,.06);opacity:0;visibility:hidden;transition:opacity .5s,transform .5s,visibility .5s;pointer-events:none}
+.story-banner.active{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.story-banner small{display:block;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:5px;color:#54f7d2;margin-bottom:6px}
+.story-banner strong{display:block;font-size:22px;font-weight:700;letter-spacing:2px;color:#eafff8;margin-bottom:8px;text-shadow:0 0 18px rgba(84,247,210,.25)}
+.story-banner p{margin:0;font-size:14px;line-height:1.8;letter-spacing:1px;color:#9fc4bb;font-family:'Noto Sans SC',sans-serif}
+.story-banner::after{content:'';position:absolute;left:0;bottom:0;height:2px;width:100%;background:linear-gradient(90deg,var(--cyan),transparent);opacity:.6}
+@media(max-width:760px){.story-banner{top:8%;padding:12px 16px 14px}.story-banner strong{font-size:18px}.story-banner p{font-size:12px;line-height:1.65}}
+
