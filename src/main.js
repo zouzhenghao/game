@@ -156,6 +156,16 @@ function updateHUD(data) {
   $('#enemy-count').textContent = data.intermission ? '区域暂时安全' : `${data.enemies} 个敌对信号`;
   $('#score-value').textContent = pad(data.score, 6);
   $('#combo-value').textContent = `× ${data.combo.toFixed(1)}`;
+  const comboDisplay = $('#combo-display');
+  if (comboDisplay) {
+    const count = data.comboCount || 0;
+    if (Number(comboDisplay.dataset.prev || 0) < count) { comboDisplay.classList.remove('pulse'); void comboDisplay.offsetWidth; comboDisplay.classList.add('pulse'); }
+    comboDisplay.dataset.prev = count;
+    $('#combo-count').textContent = count;
+    $('#combo-mult').textContent = `× ${data.combo.toFixed(1)}`;
+    comboDisplay.classList.toggle('hot', count >= 10);
+    comboDisplay.classList.toggle('active', count >= 2);
+  }
   $('#weapon-name').innerHTML = data.weapon.label;
   $('#weapon-class').textContent = data.weapon.className;
   const scopeEl = $('#scope-readout');
@@ -349,8 +359,15 @@ function renderShop(shop, credits, containerId, creditsId) {
 }
 
 function showUpgrades(payload) {
-  const { freeChoices, shop, credits, rerollCost, freePicked, freePickIndex } = payload;
-  // 免费基础强化 · 三选一（不消耗信用点）
+  const { freeChoices, shop, credits, rerollCost, freePicked, freePickIndex, shopPhase } = payload;
+  const isShop = shopPhase === 'shop';
+  // 两阶段切换：① 免费强化 ② 补给商店
+  const freePhaseEl = $('#free-phase');
+  const shopPhaseEl = $('#shop-phase');
+  if (freePhaseEl) freePhaseEl.style.display = isShop ? 'none' : '';
+  if (shopPhaseEl) shopPhaseEl.style.display = isShop ? '' : 'none';
+  $$('.upgrade-step').forEach((b) => b.classList.toggle('active', b.dataset.step === (isShop ? 'shop' : 'free')));
+  // 阶段一：免费基础强化 · 三选一（不消耗信用点）
   $('#free-choices').innerHTML = freeChoices.map((up, index) => {
     const picked = freePicked && freePickIndex === index;
     const dimmed = freePicked && freePickIndex !== index;
@@ -363,10 +380,16 @@ function showUpgrades(payload) {
     </button>`;
   }).join('');
   $$('[data-free]').forEach((button) => button.addEventListener('click', () => game.chooseFreeUpgrade(Number(button.dataset.free))));
-  // 货架（整备页只渲染主货架面板）
+  // 阶段二：货架
   renderShop(shop, credits, '#shop-panel', '#shop-credits');
-  // 刷新按钮：花费信用点重抽（按可负担性禁用）
-  const rerollBtn = $('#reroll-button');
+  // 阶段一刷新（重抽免费三选一）：领取后不可再刷，避免重复白嫖
+  const rerollFreeBtn = $('#reroll-free-button');
+  if (rerollFreeBtn) {
+    $('#reroll-free-label').textContent = `刷新选项 · ${Math.floor(rerollCost)} CR`;
+    rerollFreeBtn.disabled = freePicked || credits < rerollCost;
+  }
+  // 阶段二刷新（重抽货架）
+  const rerollBtn = $('#reroll-shop-button');
   if (rerollBtn) {
     $('#reroll-label').textContent = `刷新货架 · ${Math.floor(rerollCost)} CR`;
     rerollBtn.disabled = credits < rerollCost;
@@ -439,7 +462,6 @@ game = new Game($('#game-canvas'), $('#radar'), {
   onBuild: showBuild,
   onAchievement: showAchievement,
   onDamageNumber: showDamageNumber,
-  onBreak: ({ name }) => combatBanner('break', 'STAGGER / BREAK', '失衡突破', `${name} 被击溃 · 连携窗口开启`),
   onPerfect: () => combatBanner('perfect', 'PERFECT DODGE', '极限闪避', '完美时机 · 时停反击窗口'),
   onGlitch: (level) => glitchFlash(level),
   onSlowmo: (active) => setSlowmo(active),
@@ -457,11 +479,21 @@ window.nexusGame = game;
 // 越界协议 // OVERBOUND 作弊清单面板关闭
 $('#cheat-close').addEventListener('click', () => game.toggleCheatConsole(false));
 $('#shop-close').addEventListener('click', () => game.closeShopStandalone());
-// 整备页：刷新货架 / 确认整备出击
-if ($('#reroll-button')) $('#reroll-button').addEventListener('click', () => game.rerollShop());
+// 整备页两阶段：阶段一刷新免费选项 / 前往商店 / 阶段二刷新货架 / 出击
+if ($('#reroll-free-button')) $('#reroll-free-button').addEventListener('click', () => game.rerollFree());
+if ($('#reroll-shop-button')) $('#reroll-shop-button').addEventListener('click', () => game.rerollShop());
+if ($('#to-shop-button')) $('#to-shop-button').addEventListener('click', () => game.gotoShop());
 if ($('#deploy-button')) $('#deploy-button').addEventListener('click', () => game.deploy());
+// 阶段切换步骤条
+$$('.upgrade-step').forEach((btn) => btn.addEventListener('click', () => {
+  if (btn.dataset.step === 'shop') game.gotoShop();
+  else { const fp = $('#free-phase'); const sp = $('#shop-phase'); if (fp) fp.style.display = ''; if (sp) sp.style.display = 'none'; $$('.upgrade-step').forEach((b) => b.classList.toggle('active', b.dataset.step === 'free')); }
+}));
 // 点击作弊清单空白处也可关闭（仅当点击的是遮罩本身）
 $('#cheat-console').addEventListener('click', (event) => { if (event.target === $('#cheat-console')) game.toggleCheatConsole(false); });
+// 手机端暂停 / 菜单按钮（桌面用右上角暂停键）
+const mobilePause = $('#mobile-pause');
+if (mobilePause) mobilePause.addEventListener('click', () => { if (game.state === 'playing') game.pause(); });
 
 // 作弊面板：手机 / 鼠标可直接点按的开挂按钮（无需键盘输入密语）
 function buildCheatButtons() {

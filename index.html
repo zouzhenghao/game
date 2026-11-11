@@ -124,6 +124,7 @@
         <div id="kill-feed" class="kill-feed"></div>
         <div id="announcer" class="announcer"><small></small><strong></strong><p></p></div>
         <div id="crosshair" class="crosshair"><i></i><i></i><i></i><i></i><b></b><span id="red-dot"></span><span id="hitmarker"></span></div>
+        <div id="combo-display" class="combo-display"><b id="combo-count">0</b><span>连击</span><em id="combo-mult">×1.0</em></div>
         <div id="scope-readout" class="scope-readout"></div>
         <div class="hud-bottom-left"><div class="ability" id="ability-dash"><kbd>Q</kbd><div><strong>相位冲刺</strong><span><i></i></span></div><b class="ability-status">就绪</b></div><div class="ability" id="ability-pulse"><kbd>E</kbd><div><strong>电磁脉冲</strong><span><i></i></span></div><b class="ability-status">就绪</b></div></div>
         <div class="energy-block" id="energy-block">
@@ -152,6 +153,7 @@
           <div id="look-zone" class="look-zone"></div>
           <button id="mobile-fire" class="mobile-fire" aria-label="开火"><i></i><span>FIRE</span></button>
           <div class="board-action-row">
+            <button id="mobile-pause" class="mobile-small pause" aria-label="暂停菜单">Ⅱ</button>
             <button id="mobile-reload" class="mobile-small reload" aria-label="装填">R</button>
             <button id="mobile-dash" class="mobile-small dash" aria-label="冲刺">Q</button>
             <button id="mobile-pulse" class="mobile-small pulse" aria-label="脉冲">E</button>
@@ -172,6 +174,7 @@
           <div class="eyebrow">OVERBOUND PROTOCOL / 越界协议</div>
           <h2>作弊码清单<span>.</span></h2>
           <p class="modal-lead">单机训练用外挂。游戏中直接敲字母触发（大小写均可），或按 <kbd>`</kbd> / ↑↑↓↓←→←→BA 打开本清单。</p>
+          <div class="cheat-disclaimer">⚠ 越界协议声明：启用外挂将影响正常游戏体验，本局成绩与成就不计入个人最佳纪录。</div>
           <div class="cheat-list">
             <div class="cheat-row"><kbd>LOCKON</kbd><span>锁头 // 按距离近→远选靶，统一瞄头线，跳过墙后目标</span></div>
             <div class="cheat-row"><kbd>AUTOFIRE</kbd><span>自动射击 // 锁定目标后持续开火（含半自动武器）</span></div>
@@ -198,16 +201,28 @@
       </section>
 
       <section id="upgrade-screen" class="screen overlay-screen">
-        <div class="upgrade-wrap"><div class="eyebrow">COMBAT ADAPTATION / AVAILABLE</div><h2>战后补给站<span>.</span></h2><p>波次清除。先领取一项免费基础强化，再按需采购货架物资，最后确认整备出击。</p>
-          <div class="upgrade-subhead">免费基础强化 · 三选一 <span class="subhead-note">不消耗信用点</span></div>
-          <div id="free-choices" class="free-choices"></div>
-          <div class="shop-head"><span>NX 补给网络 // 货架</span><b id="shop-credits">0 CR</b></div>
-          <div id="shop-panel" class="shop-panel"></div>
-          <div class="upgrade-actions">
-            <button id="reroll-button" class="secondary-button"><span id="reroll-label">刷新货架</span><i>↻</i></button>
-            <button id="deploy-button" class="primary-button" disabled><span>确认整备 · 出击</span><b>↗</b><i>↗</i></button>
+        <div class="upgrade-wrap"><div class="eyebrow">COMBAT ADAPTATION / AVAILABLE</div><h2>战后补给站<span>.</span></h2><p>波次清除。先领取一项免费基础强化，再进入补给商店采购，最后确认整备出击。</p>
+          <div class="upgrade-steps">
+            <button class="upgrade-step active" data-step="free">① 免费强化</button>
+            <button class="upgrade-step" data-step="shop">② 补给商店</button>
           </div>
-          <small class="upgrade-hint">按数字键 1—3 快速领取基础强化 · 锁定货架项可在刷新后保留 · 按 Enter 出击</small>
+          <div id="free-phase" class="upgrade-phase">
+            <div class="upgrade-subhead">免费基础强化 · 三选一 <span class="subhead-note">不消耗信用点</span></div>
+            <div id="free-choices" class="free-choices"></div>
+            <div class="upgrade-actions">
+              <button id="reroll-free-button" class="secondary-button"><span id="reroll-free-label">刷新选项</span><i>↻</i></button>
+              <button id="to-shop-button" class="primary-button"><span>前往补给商店</span><b>↗</b></button>
+            </div>
+          </div>
+          <div id="shop-phase" class="upgrade-phase" style="display:none">
+            <div class="shop-head"><span>NX 补给网络 // 货架</span><b id="shop-credits">0 CR</b></div>
+            <div id="shop-panel" class="shop-panel"></div>
+            <div class="upgrade-actions">
+              <button id="reroll-shop-button" class="secondary-button"><span id="reroll-label">刷新货架</span><i>↻</i></button>
+              <button id="deploy-button" class="primary-button" disabled><span>确认整备 · 出击</span><b>↗</b></button>
+            </div>
+          </div>
+          <small class="upgrade-hint">阶段一：按 1—3 领取一项免费强化（可花钱刷新选项，但每波仅能领一次）· 阶段二：可锁定货架项、刷新后保留 · 按 Enter 出击</small>
         </div>
       </section>
 
