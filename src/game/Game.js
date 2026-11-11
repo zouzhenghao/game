@@ -48,14 +48,33 @@ export function detectProfile() {
   return 'desktop';
 }
 
+/**
+ * 武器库：15 把，按 category 分为 pistol / rifle / sniper / special。
+ * 6–14 为 V1.0 新增（手枪 / 步枪 / 狙击各 3 把），price 用于战后商店购买。
+ * 所有武器共用同一套命中 / 墙体 / 宽容判定逻辑。
+ */
 const WEAPONS = [
-  { id: 'rifle', name: 'VX-9 脉冲', label: 'VX-9 <span>脉冲</span>', className: '突击步枪 // AUTO', damage: 24, fireRate: 9, magazine: 30, reserve: 180, reload: 1.45, spread: 0.009, pellets: 1, auto: true, range: 90 },
-  { id: 'shotgun', name: 'SG-12 裂解', label: 'SG-12 <span>裂解</span>', className: '战术霰弹枪 // PUMP', damage: 14, fireRate: 1.2, magazine: 6, reserve: 42, reload: 1.8, spread: 0.065, pellets: 8, auto: false, range: 42 },
-  { id: 'rail', name: 'R-01 磁轨', label: 'R-01 <span>磁轨</span>', className: '磁轨精确步枪 // SEMI', damage: 135, fireRate: 0.8, magazine: 5, reserve: 25, reload: 2.1, spread: 0.001, pellets: 1, auto: false, range: 130, pierce: true },
-  { id: 'arc', name: 'ARC-7 弧光', label: 'ARC-7 <span>弧光</span>', className: '链式电弧 // CHAIN', damage: 46, fireRate: 3.4, magazine: 24, reserve: 120, reload: 1.7, spread: 0.014, pellets: 1, auto: true, range: 62, chain: 3 },
-  { id: 'rocket', name: 'WN-5 蜂巢', label: 'WN-5 <span>蜂巢</span>', className: '制导导弹 // HOMING', damage: 120, fireRate: 1.1, magazine: 4, reserve: 16, reload: 2.2, spread: 0, pellets: 1, auto: false, range: 130, rocket: true, aoe: 6 },
-  { id: 'frost', name: 'LN-3 寒霜', label: 'LN-3 <span>寒霜</span>', className: '低温步枪 // CRYO', damage: 30, fireRate: 4.2, magazine: 22, reserve: 110, reload: 1.6, spread: 0.012, pellets: 1, auto: true, range: 95, frost: true, slowDuration: 2.2, slowStrength: 0.5 },
+  { id: 'rifle', name: 'VX-9 脉冲', label: 'VX-9 <span>脉冲</span>', className: '突击步枪 // AUTO', category: 'rifle', price: 380, desc: '稳定的全自动脉冲步枪，适合中距离持续压制。', damage: 24, fireRate: 9, magazine: 30, reserve: 180, reload: 1.45, spread: 0.009, pellets: 1, auto: true, range: 90 },
+  { id: 'shotgun', name: 'SG-12 裂解', label: 'SG-12 <span>裂解</span>', className: '战术霰弹枪 // PUMP', category: 'special', price: 420, desc: '八枚高能弹丸同时释放，近距离可造成毁灭性伤害。', damage: 14, fireRate: 1.2, magazine: 6, reserve: 42, reload: 1.8, spread: 0.065, pellets: 8, auto: false, range: 42 },
+  { id: 'rail', name: 'R-01 磁轨', label: 'R-01 <span>磁轨</span>', className: '磁轨精确步枪 // SEMI', category: 'sniper', price: 640, desc: '高精度磁轨射线，贯穿一条直线上的所有敌人。', damage: 135, fireRate: 0.8, magazine: 5, reserve: 25, reload: 2.1, spread: 0.001, pellets: 1, auto: false, range: 130, pierce: true },
+  { id: 'arc', name: 'ARC-7 弧光', label: 'ARC-7 <span>弧光</span>', className: '链式电弧 // CHAIN', category: 'special', price: 660, desc: '发射链式电弧，命中后自动跳跃到附近敌人。', damage: 46, fireRate: 3.4, magazine: 24, reserve: 120, reload: 1.7, spread: 0.014, pellets: 1, auto: true, range: 62, chain: 3 },
+  { id: 'rocket', name: 'WN-5 蜂巢', label: 'WN-5 <span>蜂巢</span>', className: '制导导弹 // HOMING', category: 'special', price: 780, desc: '六管制导发射器，导弹自动锁定敌人并产生范围爆炸。', damage: 120, fireRate: 1.1, magazine: 4, reserve: 16, reload: 2.2, spread: 0, pellets: 1, auto: false, range: 130, rocket: true, aoe: 6 },
+  { id: 'frost', name: 'LN-3 寒霜', label: 'LN-3 <span>寒霜</span>', className: '低温步枪 // CRYO', category: 'rifle', price: 600, desc: '低温步枪，命中使敌人减速 50%，是控场核心手段。', damage: 30, fireRate: 4.2, magazine: 22, reserve: 110, reload: 1.6, spread: 0.012, pellets: 1, auto: true, range: 95, frost: true, slowDuration: 2.2, slowStrength: 0.5 },
+  // —— V1.0 新增 · 手枪 3 把 ——
+  { id: 'sentinel', name: 'PX-1 哨兵', label: 'PX-1 <span>哨兵</span>', className: '战术手枪 // SIDEARM', category: 'pistol', price: 240, desc: '高单发伤害的半自动手枪，弹匣小但暴击收益极高。', damage: 42, fireRate: 3.2, magazine: 12, reserve: 96, reload: 1.2, spread: 0.006, pellets: 1, auto: false, range: 55, critBonus: 0.16 },
+  { id: 'twins', name: 'PX-2 双生', label: 'PX-2 <span>双生</span>', className: '双持连发 // DUAL', category: 'pistol', price: 320, desc: '双持全自动机匣，射速极快，适合清理脆皮与游隼。', damage: 24, fireRate: 6.5, magazine: 20, reserve: 160, reload: 1.5, spread: 0.018, pellets: 1, auto: true, range: 48 },
+  { id: 'judgement', name: 'PX-3 审判', label: 'PX-3 <span>审判</span>', className: '重型手炮 // HANDCANNON', category: 'pistol', price: 420, desc: '大口径手炮，近距离一发可撕开重装单位装甲。', damage: 95, fireRate: 1.1, magazine: 6, reserve: 48, reload: 1.9, spread: 0.002, pellets: 1, auto: false, range: 70 },
+  // —— V1.0 新增 · 步枪 3 把 ——
+  { id: 'dawn', name: 'AR-4 破晓', label: 'AR-4 <span>破晓</span>', className: '模块化突击步枪 // AUTO', category: 'rifle', price: 460, desc: '均衡型全自动步枪，伤害与稳定性都优于制式装备。', damage: 28, fireRate: 8, magazine: 32, reserve: 192, reload: 1.5, spread: 0.008, pellets: 1, auto: true, range: 95 },
+  { id: 'hornet', name: 'AR-8 蜂刺', label: 'AR-8 <span>蜂刺</span>', className: '高射速卡宾 // SMG', category: 'rifle', price: 520, desc: '超高射速低后坐，靠弹幕压制，配合弱点解析收益极高。', damage: 16, fireRate: 13, magazine: 45, reserve: 270, reload: 1.7, spread: 0.016, pellets: 1, auto: true, range: 70 },
+  { id: 'maul', name: 'AR-9 重锤', label: 'AR-9 <span>重锤</span>', className: '重型战斗步枪 // HEAVY', category: 'rifle', price: 560, desc: '高单发伤害的慢射速步枪，中远距离点杀效率出色。', damage: 62, fireRate: 3.6, magazine: 20, reserve: 120, reload: 2.0, spread: 0.011, pellets: 1, auto: true, range: 100 },
+  // —— V1.0 新增 · 狙击 3 把 ——
+  { id: 'hush', name: 'SR-2 静默', label: 'SR-2 <span>静默</span>', className: '半自动狙击 // DMR', category: 'sniper', price: 620, desc: '高精度半自动狙击，弹匣容量更宽裕，容错更高。', damage: 190, fireRate: 0.9, magazine: 5, reserve: 30, reload: 2.2, spread: 0.0006, pellets: 1, auto: false, range: 150, pierce: true },
+  { id: 'piercer', name: 'SR-6 穿云', label: 'SR-6 <span>穿云</span>', className: '贯穿狙击 // ANTI-MATERIEL', category: 'sniper', price: 700, desc: '射速更快的贯穿狙击，一发可洞穿整列敌人。', damage: 150, fireRate: 1.4, magazine: 8, reserve: 48, reload: 2.0, spread: 0.001, pellets: 1, auto: false, range: 160, pierce: true },
+  { id: 'tribunal', name: 'SR-9 天罚', label: 'SR-9 <span>天罚</span>', className: '反器材轨道炮 // RAILGUN', category: 'sniper', price: 860, desc: '单发毁伤极高的轨道炮，首领与重装的终结者。', damage: 320, fireRate: 0.55, magazine: 3, reserve: 18, reload: 2.8, spread: 0, pellets: 1, auto: false, range: 180, pierce: true },
 ];
+const WEAPON_CATEGORY_LABEL = { pistol: '手枪', rifle: '步枪', sniper: '狙击枪', special: '特殊装备' };
+export { WEAPONS, WEAPON_CATEGORY_LABEL };
 
 const ENEMY_DATA = {
   runner: { name: '猎犬突击体', health: 65, speed: 4.7, damage: 13, score: 120, radius: 0.55, color: 0xff4658 },
@@ -69,11 +88,34 @@ const ENEMY_DATA = {
   boss: { name: '守望者核心', health: 2600, speed: 1.45, damage: 18, score: 5000, radius: 2.1, color: 0xff593d },
 };
 
+/** 难度绑定通关波次：简单 10 波 / 标准 15 波 / 困难 20 波 / 极限 25 波，逐级递增。 */
 const DIFFICULTY = {
-  recruit: { id: 'recruit', label: '新兵', hp: 0.78, damage: 0.68, score: 0.85, drop: 1.35, spawn: 0.85 },
-  standard: { id: 'standard', label: '标准', hp: 1, damage: 1, score: 1, drop: 1, spawn: 1 },
-  nightmare: { id: 'nightmare', label: '噩梦', hp: 1.4, damage: 1.45, score: 1.5, drop: 0.82, spawn: 1.18 },
+  recruit: { id: 'recruit', label: '新兵', waves: 10, hp: 0.78, damage: 0.68, score: 0.85, drop: 1.35, spawn: 0.85 },
+  standard: { id: 'standard', label: '标准', waves: 15, hp: 1, damage: 1, score: 1, drop: 1, spawn: 1 },
+  nightmare: { id: 'nightmare', label: '噩梦', waves: 20, hp: 1.4, damage: 1.45, score: 1.5, drop: 0.82, spawn: 1.18 },
+  apex: { id: 'apex', label: '极限', waves: 25, hp: 1.85, damage: 1.8, score: 2.1, drop: 0.7, spawn: 1.35 },
 };
+
+/** 每波随机战术任务，完成后发放信用点；通关后任务奖励翻倍。 */
+const MISSIONS = [
+  { id: 'flawless', text: '本波不受到任何伤害', reward: 200, target: 1 },
+  { id: 'crit', text: '造成 5 次暴击', reward: 170, target: 5 },
+  { id: 'headshot', text: '命中敌人弱点 6 次', reward: 160, target: 6 },
+  { id: 'combo', text: '达成 8 连击', reward: 180, target: 8 },
+  { id: 'barrel', text: '用油桶击毁 2 个敌人', reward: 220, target: 2 },
+  { id: 'kills', text: '本波击毁 12 个敌人', reward: 150, target: 12 },
+];
+
+/** 章节故事线：抵达指定波次时推送剧情，波数越长章节越靠后。 */
+const CHAPTERS = [
+  { wave: 1, title: '第一章 // 霓虹余烬', text: '02:17，第七区断联。你是唯一还能接入战术网络的「幽灵」。' },
+  { wave: 4, title: '第二章 // 铁潮', text: '机械军团开始成建制推进，前哨站接连失守，补给线被压缩到极限。' },
+  { wave: 7, title: '第三章 // 裂隙回声', text: '裂隙深处传来同源信号——守望者正在召回所有残部。' },
+  { wave: 11, title: '第四章 // 深潜', text: '常规补给断绝，流动商人成了唯一的装备来源。' },
+  { wave: 16, title: '第五章 // 临界', text: '敌方核心开始超载，战场的物理规则正在被改写。' },
+  { wave: 21, title: '终章 // 黎明协议', text: '最后一道防线。摧毁守望者，结束这场没有尽头的夜。' },
+];
+export { DIFFICULTY, MISSIONS, CHAPTERS };
 
 export const ACHIEVEMENTS = [
   { id: 'first-blood', name: '首次接触', desc: '击毁第一个敌对单位' },
@@ -140,6 +182,8 @@ export class Game {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.clock = new THREE.Clock();
     this.raycaster = new THREE.Raycaster();
+    this.losRay = new THREE.Raycaster();   // 独立于开火射线：视线 / 遮挡判定专用
+    this.missStreak = 0;                    // 连续落空计数：驱动宽容命中补偿
     this.state = 'menu';
     this.mode = 'campaign';
     this.keys = {};
@@ -150,6 +194,8 @@ export class Game {
     this.pitch = 0;
     this.cheats = { god: false, ammo: false, lock: false, auto: false, wall: false, slow: false };
     this.aimTarget = null;
+    this.aimHoldTimer = 0;                  // 目标粘滞计时：自动瞄准不来回乱跳
+    this.hitStop = 0;                       // 命中顿帧（绝区零式打击反馈）
     this.cheatBuffer = '';
     this.konami = [];
     this.cheatToastTimer = 0;
@@ -177,6 +223,13 @@ export class Game {
     this.muzzleTimer = 0;
     this.currentUpgradeChoices = [];
     this.difficulty = DIFFICULTY.standard;
+    this.clearedContent = localStorage.getItem('nexus-cleared') === '1';  // 通关基础 10 波后解锁的内容
+    this.mission = null;
+    this.missionBonus = 1;
+    this.shopDiscount = 1;
+    this.fieldVendor = null;
+    this.waveTimeLeft = 0;
+    this.fieldEvent = null;
     this.appliedUpgrades = [];
     this.runAchievements = new Set();
     this.critCount = 0;
@@ -209,6 +262,25 @@ export class Game {
     this.scene.add(this.camera);
     this.weaponRoot.position.set(0.36, -0.31, -0.62);
     this.applyWeaponScale();
+    // 第一人称手臂 / 护手：视图模型不再是一把「悬空的枪」。
+    const hands = new THREE.Group();
+    const glove = new THREE.MeshStandardMaterial({ color: 0x18292f, metalness: 0.55, roughness: 0.62 });
+    const armor = new THREE.MeshStandardMaterial({ color: 0x2c4b48, metalness: 0.82, roughness: 0.34, emissive: 0x0e2b26, emissiveIntensity: 0.5 });
+    const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.105, 0.52, 8), glove);
+    forearm.rotation.set(Math.PI / 2.45, 0, -0.25);
+    forearm.position.set(0.19, -0.3, 0.16);
+    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.09, 8), armor);
+    cuff.rotation.copy(forearm.rotation);
+    cuff.position.set(0.23, -0.21, 0.02);
+    const support = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.38, 8), glove);
+    support.rotation.set(Math.PI / 2.2, 0, 0.42);
+    support.position.set(-0.16, -0.26, -0.3);
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.05, 0.19), armor);
+    plate.position.set(-0.13, -0.16, -0.36);
+    hands.add(forearm, cuff, support, plate);
+    hands.traverse((child) => { child.renderOrder = 10; child.frustumCulled = false; });
+    this.weaponRoot.add(hands);
+    this.viewHands = hands;
     const viewLight = new THREE.PointLight(0xa8eadc, 1.35, 3.6);
     viewLight.position.set(0.2, 0.25, 0.25);
     this.camera.add(viewLight);
@@ -248,6 +320,12 @@ export class Game {
       parts.flash.rotation.z += dt * 18;
     }
     if (parts.coils) parts.coils.children.forEach((ring, i) => { ring.rotation.z += dt * (i % 2 ? -2.2 : 2.2); });
+    if (parts.optics) {
+      // 瞄准过渡：镜身微降、红点由暗转亮并与屏幕准星重合
+      parts.optics.position.y = lerp(parts.optics.position.y, 0.15 - (this.aimBlend || 0) * 0.035, 1 - Math.exp(-dt * 10));
+      parts.redDot.scale.setScalar(0.8 + (this.aimBlend || 0) * 0.8);
+      parts.redDot.material.color.setHex(this.aimBlend > 0.45 ? 0xff2038 : 0xa83344);
+    }
   }
 
   resetPlayer() {
@@ -256,11 +334,15 @@ export class Game {
       damageMultiplier: 1, fireRateMultiplier: 1, reloadMultiplier: 1, speedMultiplier: 1, ammoMultiplier: 1,
       dashCooldown: 0, dashMax: 5, dashTime: 0, invulnerable: 0, pulseCooldown: 0, pulseMax: 12, pulseRadius: 12, pulseDamage: 75,
       shieldRegen: 9, shieldDelay: 4.5, lastDamage: 0, killHeal: 0,
+      jumpY: 0, jumpVel: 0, grounded: true, slideTime: 0, slideCooldown: 0, slideDir: null,
       critChance: 0.08, critMultiplier: 1.75, executeBonus: 1, executeThreshold: 0.35,
       energy: 0, energyMax: 100, energyGain: 1, overdrive: 0, overdriveMax: 8,
       chainBonus: 0, chainDamage: 1, pickupRadius: 1.45, pickupPower: 1, dashWave: 0,
     };
     this.weaponState = WEAPONS.map((weapon) => ({ ammo: weapon.magazine, reserve: weapon.reserve }));
+    this.loadout = [0];          // 已持有的武器（WEAPONS 绝对索引），最多 6 把对应 HUD 槽 1–6
+    this.credits = 0;            // 战后商店货币，与积分纪录互不影响
+    this.currentShop = [];
     this.weaponIndex = 0;
     this.unlockedWeapon = 0;
     this.weaponCooldown = 0;
@@ -288,6 +370,18 @@ export class Game {
     this.comboPeak = 1;
     this.waveDamageTaken = 0;
     this.dashActive = false;
+    this.aimBlend = 0;
+    this.sprintBlend = 0;
+    this.slideBlend = 0;
+    this.landKick = 0;
+    this.hitCombo = 0;
+    this.hitComboTimer = 0;
+    this.hitStop = 0;
+    this.mission = null;
+    this.missionBonus = 1;
+    this.shopDiscount = 1;
+    this.waveTimeLeft = 0;
+    this.fieldEvent = null;
   }
 
   clearDynamicObjects() {
@@ -297,12 +391,18 @@ export class Game {
     });
     this.enemies = [];
     this.enemyHitMeshes = [];
+    this.xrayState = false;      // 新一局的敌人材质需要重新按透视状态初始化
+    this.aimTarget = null;
+    this.missStreak = 0;
     this.projectiles = [];
     this.pickups = [];
     this.particles = [];
     this.tracers = [];
     this.effects = [];
     this.spawnQueue = [];
+    if (this.fieldVendor) { this.fieldVendor.group.removeFromParent(); this.fieldVendor = null; }
+    const interact = document.getElementById('interact-toast');
+    if (interact) interact.classList.remove('show');
     // 油桶属于场景固定物：重开时复活而非删除，并重建派生数组。
     this.obstacles = this.obstacles.filter((box) => !this.barrelBoxes.has(box));
     this.barrelMeshes = [];
@@ -317,19 +417,24 @@ export class Game {
     });
   }
 
-  start(mode = 'campaign', difficultyId = 'standard') {
+  start(mode = 'campaign', difficultyId = 'standard', startWeapon = 0) {
     this.audio.init();
     this.runId = (this.runId || 0) + 1;
     this.clearDynamicObjects();
     this.resetPlayer();
+    const initial = Number.isInteger(startWeapon) && startWeapon >= 0 && startWeapon < WEAPONS.length ? startWeapon : 0;
+    this.loadout = [initial];
+    this.weaponIndex = initial;
+    this.unlockedWeapon = initial;
     this.mode = mode;
     this.difficulty = DIFFICULTY[difficultyId] || DIFFICULTY.standard;
+    this.waveTimeLeft = mode === 'gauntlet' ? 45 : 0;
     this.firing = false;
     this.aiming = false;
     this.touchMove = { x: 0, y: 0 };
     this.state = 'playing';
     this.weaponRoot.visible = true;
-    this.buildWeaponModel(0);
+    this.buildWeaponModel(this.weaponIndex);
     this.camera.position.copy(this.player.position);
     this.camera.rotation.set(0, 0, 0);
     this.callbacks.onState('playing');
@@ -338,7 +443,7 @@ export class Game {
     this.intermission = true;
     this.requestLock();
     this.updateHUD(true);
-    if (this.isBoard) this.callbacks.onToast?.('白板课堂模式 // 左侧移动 · 右侧滑动瞄准 · 可开启自动演示', 3200);
+    if (this.isBoard) this.callbacks.onToast?.('白板课堂模式 // 左下角「移动 / MOVE」圆形摇杆移动 · 右侧滑动瞄准 · 右下 FIRE 开火 · 可开启 AUTO 自动演示', 5200);
   }
 
   quit() {
@@ -389,13 +494,13 @@ export class Game {
       if (event.code === 'KeyR') this.reload();
       if (event.code === 'KeyQ') this.dash();
       if (event.code === 'KeyE') this.pulse();
+      if (event.code === 'Space') { event.preventDefault?.(); this.jump(); }
+      if (event.code === 'ControlLeft' || event.code === 'ControlRight' || event.code === 'KeyC') this.slide();
       if (event.code === 'KeyF') this.activateOverdrive();
-      if (event.code === 'Digit1') this.switchWeapon(0);
-      if (event.code === 'Digit2') this.switchWeapon(1);
-      if (event.code === 'Digit3') this.switchWeapon(2);
-      if (event.code === 'Digit4') this.switchWeapon(3);
-      if (event.code === 'Digit5') this.switchWeapon(4);
-      if (event.code === 'Digit6') this.switchWeapon(5);
+      // 数字键 1–6 对应当前 loadout 的六个槽位
+      const digit = /^Digit([1-6])$/.exec(event.code);
+      if (digit) { const w = this.loadout[Number(digit[1]) - 1]; if (w !== undefined) this.switchWeapon(w); }
+      if (event.code === 'KeyG') this.openFieldShop();
       if (event.code === 'KeyP' || (event.code === 'Escape' && !document.pointerLockElement)) {
         if (this.state === 'playing') this.pause();
         else if (this.state === 'paused') this.resume();
@@ -422,13 +527,10 @@ export class Game {
     this.canvas.addEventListener('wheel', (event) => {
       if (this.state !== 'playing') return;
       const direction = event.deltaY > 0 ? 1 : -1;
-      let next = this.weaponIndex;
-      const total = WEAPONS.length;
-      for (let i = 0; i < total; i++) {
-        next = (next + direction + total) % total;
-        if (next <= this.unlockedWeapon) break;
-      }
-      this.switchWeapon(next);
+      const total = this.loadout.length;
+      if (total < 2) return;
+      const pos = Math.max(0, this.loadout.indexOf(this.weaponIndex));
+      this.switchWeapon(this.loadout[(pos + direction + total) % total]);
     }, { passive: true });
     document.addEventListener('pointerlockchange', () => {
       if (!this.isTouch && this.state === 'playing' && document.pointerLockElement !== this.canvas && this.elapsed > 0.6) this.pause();
@@ -455,6 +557,7 @@ export class Game {
       event.preventDefault();
       stick.setPointerCapture?.(event.pointerId);
       stickPointer = event.pointerId;
+      stick.classList.add('engaged');
       updateStick(event);
     }, { passive: false });
     stick.addEventListener('pointermove', (event) => {
@@ -467,6 +570,7 @@ export class Game {
       stickPointer = null;
       this.touchMove = { x: 0, y: 0 };
       knob.style.transform = '';
+      stick.classList.remove('engaged');
     };
     stick.addEventListener('pointerup', endStick);
     stick.addEventListener('pointercancel', endStick);
@@ -511,7 +615,13 @@ export class Game {
     bindButton('mobile-reload', () => this.reload());
     bindButton('mobile-dash', () => this.dash());
     bindButton('mobile-pulse', () => this.pulse());
-    bindButton('mobile-switch', () => this.switchWeapon((this.weaponIndex + 1) % (this.unlockedWeapon + 1)));
+    bindButton('mobile-switch', () => {
+      const total = this.loadout.length;
+      const pos = Math.max(0, this.loadout.indexOf(this.weaponIndex));
+      this.switchWeapon(this.loadout[(pos + 1) % total]);
+    });
+    bindButton('mobile-jump', () => this.jump());
+    bindButton('mobile-slide', () => this.slide());
     bindButton('mobile-overdrive', () => this.activateOverdrive());
     bindButton('mobile-aim', () => { this.aiming = !this.aiming; document.getElementById('mobile-aim')?.classList.toggle('active', this.aiming); });
     bindButton('mobile-demo', () => this.setDemoMode(!this.demoMode));
@@ -538,8 +648,14 @@ export class Game {
     this.waveClearPending = false;
     this.waveDamageTaken = 0;
     this.spawnQueue = [];
+    this.assignMission();
+    if (this.mode === 'gauntlet') this.waveTimeLeft = 45;
+    const chapter = CHAPTERS.find((entry) => entry.wave === this.wave);
+    if (chapter) this.callbacks.onToast?.(`${chapter.title} // ${chapter.text}`, 5200);
+    // 流动商人在第 3 / 6 / 9 波固定出现；通关后每 5 波额外投放
+    if (this.wave === 3 || this.wave === 6 || this.wave === 9 || (this.clearedContent && this.wave % 5 === 0)) this.spawnFieldVendor();
     const diff = this.difficulty;
-    const campaignBoss = this.mode === 'campaign' && this.wave === 10;
+    const campaignBoss = (this.mode === 'campaign' || this.mode === 'gauntlet') && this.wave === this.difficulty.waves;
     const endlessBoss = this.mode === 'endless' && this.wave % 5 === 0;
     if (campaignBoss || endlessBoss) {
       this.spawnQueue.push('boss');
@@ -549,7 +665,8 @@ export class Game {
       this.callbacks.onAnnounce('守望者降临', '摧毁核心装甲 · 注意范围攻击与自毁单位', 'WARNING / APEX SIGNAL', 3200);
     } else {
       const base = this.mode === 'training' ? Math.min(10, 4 + this.wave) : Math.min(30, 4 + this.wave * 2);
-      const count = Math.max(3, Math.round(base * diff.spawn));
+      const count = Math.max(3, Math.round(base * diff.spawn)) + (this.eliteWave || 0);
+      this.eliteWave = 0;
       const pool = ['runner'];
       if (this.wave >= 2) pool.push('drone', 'drone');
       if (this.wave >= 3) pool.push('phantom');
@@ -559,20 +676,22 @@ export class Game {
       for (let i = 0; i < count; i++) this.spawnQueue.push(pool[Math.floor(Math.random() * pool.length)]);
       this.callbacks.onAnnounce(`第 ${String(this.wave).padStart(2, '0')} 波`, this.wave === 1 ? '敌对信号接近 · 清除所有单位' : '威胁等级上升 · 保持移动', 'HOSTILE SIGNALS DETECTED');
     }
-    if (this.wave >= 9 && this.unlockedWeapon === 4) this.unlockWeapon(5);
-    else if (this.wave >= 8 && this.unlockedWeapon === 3) this.unlockWeapon(4);
-    else if (this.wave >= 6 && this.unlockedWeapon === 2) this.unlockWeapon(3);
-    else if (this.wave >= 4 && this.unlockedWeapon === 1) this.unlockWeapon(2);
-    else if (this.wave >= 2 && this.unlockedWeapon === 0) this.unlockWeapon(1);
+    // 每两波免费配发一把尚未持有的武器；商店可提前购买任意武器
+    if (this.wave >= 2 && this.wave % 2 === 0 && this.loadout.length < 6) {
+      const free = WEAPONS.findIndex((_, i) => !this.loadout.includes(i));
+      if (free >= 0) this.unlockWeapon(free);
+    }
     this.spawnTimer = 0.4;
     this.audio.wave();
   }
 
   unlockWeapon(index) {
-    this.unlockedWeapon = index;
+    if (!this.loadout.includes(index)) this.loadout.push(index);
+    this.loadout.sort((a, b) => a - b);
+    this.unlockedWeapon = Math.max(this.unlockedWeapon, index);
     this.weaponState[index].ammo = WEAPONS[index].magazine;
     this.weaponState[index].reserve = WEAPONS[index].reserve;
-    this.callbacks.onToast(`武器已解锁 // ${WEAPONS[index].name} · 按 ${index + 1} 切换`, 3500);
+    this.callbacks.onToast(`武器已解锁 // ${WEAPONS[index].name} · 按 ${this.loadout.indexOf(index) + 1} 切换`, 3500);
   }
 
   spawnEnemy(type) {
@@ -599,7 +718,7 @@ export class Game {
       radius: data.radius, name: data.name, attackCooldown: random(0.4, 1.3), spawnTime: 0.85, dead: false, deathTimer: 0,
       strafe: Math.random() > 0.5 ? 1 : -1, phase: Math.random() * Math.PI * 2, hitTimer: 0, healthBar: null, barFill: null,
       phased: false, phaseTimer: random(1.4, 2.8), fuse: 0, chargeTimer: 0, healTimer: 0, slow: 0,
-      parts: model.dynamic, height: model.height, baseY: model.baseY,
+      parts: model.dynamic, height: model.height, baseY: model.baseY, weakpoints: model.weakpoints,
     };
     enemy.maxHealth = enemy.health;
     const register = (object) => {
@@ -613,8 +732,9 @@ export class Game {
     model.allMeshes.forEach((object) => { group.add(object); register(object); });
     const barGroup = new THREE.Group();
     const barWidth = type === 'boss' ? 3.2 : 1.35;
-    const barBack = new THREE.Mesh(new THREE.PlaneGeometry(barWidth, 0.085), new THREE.MeshBasicMaterial({ color: 0x101818, transparent: true, opacity: 0.85, depthTest: false }));
-    const barFill = new THREE.Mesh(new THREE.PlaneGeometry(barWidth, 0.055), new THREE.MeshBasicMaterial({ color: data.color, depthTest: false }));
+    // 血条默认受墙体深度遮挡；只有 X-RAY 开启时由 applyXray 切换为穿墙显示。
+    const barBack = new THREE.Mesh(new THREE.PlaneGeometry(barWidth, 0.085), new THREE.MeshBasicMaterial({ color: 0x101818, transparent: true, opacity: 0.85, depthTest: true }));
+    const barFill = new THREE.Mesh(new THREE.PlaneGeometry(barWidth, 0.055), new THREE.MeshBasicMaterial({ color: data.color, depthTest: true }));
     barFill.position.z = 0.005;
     barGroup.add(barBack, barFill);
     barGroup.position.y = enemy.height + 0.35;
@@ -623,6 +743,17 @@ export class Game {
     enemy.healthBar = barGroup;
     enemy.barFill = barFill;
     enemy.barHalf = barWidth / 2;
+    // 怪物细化：脚下能量光环 + 头顶缓旋装甲环，让轮廓与阵营色更清晰（不参与射线命中）
+    const haloMaterial = new THREE.MeshBasicMaterial({ color: data.color, transparent: true, opacity: 0.46, toneMapped: false, depthWrite: false });
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(enemy.radius * 1.2, 0.026, 5, 24), haloMaterial);
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.y = 0.06;
+    const crown = new THREE.Mesh(new THREE.TorusGeometry(0.2 + enemy.height * 0.15, 0.016, 5, 20), haloMaterial.clone());
+    crown.position.y = enemy.height * 0.84;
+    crown.rotation.x = Math.PI / 2.6;
+    group.add(halo, crown);
+    enemy.crown = crown;
+    enemy.halo = halo;
     group.scale.setScalar(0.02);
     this.scene.add(group);
     this.enemies.push(enemy);
@@ -632,6 +763,7 @@ export class Game {
   updateEnemies(dt) {
     const playerFlat = new THREE.Vector3(this.player.position.x, 0, this.player.position.z);
     for (const enemy of this.enemies) {
+      if (enemy.crown) enemy.crown.rotation.z += dt * 1.3;
       if (enemy.dead) {
         enemy.deathTimer -= dt;
         enemy.group.rotation.z += dt * 2.4;
@@ -844,7 +976,7 @@ export class Game {
     this.audio.pulse();
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.phased) continue;
-      if (enemy.group.position.distanceTo(center) < 5.5) {
+      if (enemy.group.position.distanceTo(center) < 5.5 && this.blastReaches(center, enemy)) {
         this.damageEnemy(enemy, player.dashWave * player.damageMultiplier, enemy.group.position.clone().sub(center).setY(0).normalize());
       }
     }
@@ -896,14 +1028,17 @@ export class Game {
             .sub(projectile.mesh.position).normalize().multiplyScalar(projectile.velocity.length());
           projectile.velocity.lerp(desired, Math.min(1, dt * 3.4));
         }
+        const prev = projectile.mesh.position.clone();
         projectile.mesh.position.addScaledVector(projectile.velocity, dt);
         projectile.mesh.rotation.x += dt * 14;
+        const tunnelled = this.segmentBlocked(prev, projectile.mesh.position);
+        if (tunnelled) projectile.mesh.position.copy(prev);
         let struck = null;
         for (const enemy of this.enemies) {
           if (enemy.dead || enemy.phased) continue;
           if (enemy.group.position.distanceTo(projectile.mesh.position) < enemy.radius + 0.9) { struck = enemy; break; }
         }
-        const hitWall = this.collides(projectile.mesh.position.x, projectile.mesh.position.z, 0.2)
+        const hitWall = tunnelled || this.collides(projectile.mesh.position.x, projectile.mesh.position.z, 0.2)
           || Math.abs(projectile.mesh.position.x) > 70 || Math.abs(projectile.mesh.position.z) > 70;
         if (struck || hitWall || projectile.life <= 0) {
           this.explodeRocket(projectile);
@@ -912,10 +1047,14 @@ export class Game {
         if (projectile.life <= 0) { this.scene.remove(projectile.mesh); projectile.remove = true; }
         continue;
       }
+      const prev = projectile.mesh.position.clone();
       projectile.mesh.position.addScaledVector(projectile.velocity, dt);
       projectile.mesh.rotation.x += dt * 8;
       const position = projectile.mesh.position;
-      if (position.distanceTo(this.player.position) < 0.65) {
+      // 防隧穿：一帧内跨过墙体时回退到墙前，敌方弹丸不再「穿墙打人」。
+      const tunnelled = this.segmentBlocked(prev, position);
+      if (tunnelled) { position.copy(prev); projectile.life = 0; }
+      if (!tunnelled && position.distanceTo(this.player.position) < 0.65) {
         this.damagePlayer(projectile.damage, projectile.source);
         projectile.life = 0;
       }
@@ -952,7 +1091,26 @@ export class Game {
     const move = forward.multiplyScalar(forwardInput).add(right.multiplyScalar(sideInput));
     if (move.lengthSq() > 1) move.normalize();
     const sprinting = (this.keys.ShiftLeft || this.keys.ShiftRight) && forwardInput > 0;
-    let speed = 6.6 * player.speedMultiplier * (sprinting ? 1.5 : 1) * (this.aiming ? 0.72 : 1) * (player.overdrive > 0 ? 1.2 : 1);
+
+    // —— 动作状态：跳跃 / 滑铲 / 跑动 / 瞄准，全部平滑插值，避免姿态突变 ——
+    const p = player;
+    if (!p.grounded) {
+      p.jumpVel -= 21 * dt;
+      p.jumpY += p.jumpVel * dt;
+      if (p.jumpY <= 0) { p.jumpY = 0; p.jumpVel = 0; p.grounded = true; this.landKick = 0.45; }
+    }
+    this.landKick = Math.max(0, this.landKick - dt * 2.2);
+    if (p.slideTime > 0) p.slideTime -= dt;
+    p.slideCooldown = Math.max(0, p.slideCooldown - dt);
+    const sliding = p.slideTime > 0;
+    this.sprintBlend = lerp(this.sprintBlend, sprinting ? 1 : 0, 1 - Math.exp(-dt * 8));
+    this.slideBlend = lerp(this.slideBlend, sliding ? 1 : 0, 1 - Math.exp(-dt * 12));
+    this.aimBlend = lerp(this.aimBlend, this.aiming ? 1 : 0, 1 - Math.exp(-dt * 11));
+    if (this.hitComboTimer > 0) { this.hitComboTimer -= dt; if (this.hitComboTimer <= 0) this.hitCombo = 0; }
+
+    let speed = 6.6 * player.speedMultiplier * (1 + this.sprintBlend * 0.5)
+      * (1 - this.aimBlend * 0.28) * (player.overdrive > 0 ? 1.2 : 1) * (sliding ? 1.35 : 1);
+    if (sliding && p.slideDir) move.copy(p.slideDir);
     if (player.dashTime > 0) {
       player.dashTime -= dt;
       speed = 25;
@@ -965,15 +1123,18 @@ export class Game {
     player.velocity.lerp(targetVelocity, 1 - Math.exp(-dt * (player.dashTime > 0 ? 25 : 12)));
     this.movePlayer(player.velocity.x * dt, player.velocity.z * dt);
     const moving = player.velocity.length() > 0.4;
-    const bob = moving ? Math.sin(this.elapsed * (sprinting ? 14 : 10)) * 0.025 : 0;
-    this.camera.position.set(player.position.x, player.position.y + bob, player.position.z);
+    const bob = moving ? Math.sin(this.elapsed * (sprinting ? 14 : 10)) * (0.025 + this.sprintBlend * 0.02) * (1 - this.slideBlend * 0.6) : 0;
+    // 跳跃抬高视角 / 滑铲压低视角；player.position.y 恒为 1.7，敌人瞄准与命中判定不受影响
+    const eyeHeight = 1.7 + p.jumpY - this.slideBlend * 0.72 - this.landKick * 0.12;
+    this.camera.position.set(player.position.x, eyeHeight + bob, player.position.z);
     if (this.shake > 0) {
       this.shake = Math.max(0, this.shake - dt * 2.5);
       this.camera.position.x += random(-1, 1) * this.shake * 0.08;
       this.camera.position.y += random(-1, 1) * this.shake * 0.08;
     }
     this.camera.rotation.set(this.pitch, this.yaw, 0);
-    const targetFov = this.aiming ? (this.weaponIndex === 2 ? 42 : 56) : sprinting ? 78 : 72;
+    const baseFov = 72 + this.sprintBlend * 6 + this.slideBlend * 8;
+    const targetFov = lerp(baseFov, this.weaponIndex === 2 ? 42 : 52, this.aimBlend);
     this.camera.fov = lerp(this.camera.fov, targetFov, 1 - Math.exp(-dt * 10));
     this.camera.updateProjectionMatrix();
     this.weaponRecoil = lerp(this.weaponRecoil, 0, 1 - Math.exp(-dt * 13));
@@ -981,14 +1142,25 @@ export class Game {
     if (this.isBoard && this.weaponState[this.weaponIndex].ammo === 0 && !player.overdrive && this.reloadTimer <= 0) this.reload();
     this.updateDemoAim(dt);
     const portraitTouch = this.isTouch && innerHeight > innerWidth;
-    const aimX = this.aiming ? 0 : portraitTouch ? 0.17 : 0.36;
-    const aimY = this.aiming ? -0.22 : portraitTouch ? -0.28 : -0.31;
-    this.weaponRoot.position.x = lerp(this.weaponRoot.position.x, aimX, 1 - Math.exp(-dt * 12));
-    this.weaponRoot.position.y = lerp(this.weaponRoot.position.y, aimY + bob * 0.6, 1 - Math.exp(-dt * 12));
-    this.weaponRoot.position.z = -0.62 + this.weaponRecoil * 0.13;
-    this.weaponRoot.rotation.x = this.weaponRecoil * 0.1 + (this.reloadTimer > 0 ? Math.sin(this.reloadTimer * 4) * 0.35 : 0);
-    this.weaponRoot.rotation.z = moving ? Math.sin(this.elapsed * 5) * 0.012 : 0;
-    if (this.firing && (WEAPONS[this.weaponIndex].auto || !this.shotThisHold)) this.fireWeapon();
+    const restX = lerp(portraitTouch ? 0.17 : 0.36, 0, this.aimBlend);
+    const restY = lerp(portraitTouch ? -0.28 : -0.31, -0.20, this.aimBlend);
+    const gait = this.elapsed * (6 + this.sprintBlend * 3);
+    const swayX = moving ? Math.sin(gait) * (0.012 + this.sprintBlend * 0.024) * (1 - this.aimBlend) : 0;
+    const swayY = moving ? Math.abs(Math.cos(gait)) * (0.008 + this.sprintBlend * 0.02) * (1 - this.aimBlend) : 0;
+    // 跑步武器下沉、滑铲自然倾斜下压、瞄准时收敛到视线中心
+    const runDip = this.sprintBlend * 0.11 * (1 - this.aimBlend);
+    const slideDip = this.slideBlend * 0.16;
+    this.weaponRoot.position.x = lerp(this.weaponRoot.position.x, restX + swayX, 1 - Math.exp(-dt * 12));
+    this.weaponRoot.position.y = lerp(this.weaponRoot.position.y, restY + bob * 0.6 - runDip - slideDip + swayY, 1 - Math.exp(-dt * 12));
+    this.weaponRoot.position.z = -0.62 + this.weaponRecoil * 0.13 + this.aimBlend * 0.08;
+    this.weaponRoot.rotation.x = this.weaponRecoil * 0.1 + (this.reloadTimer > 0 ? Math.sin(this.reloadTimer * 4) * 0.35 : 0)
+      + this.sprintBlend * 0.2 * (1 - this.aimBlend) + this.slideBlend * 0.3;
+    this.weaponRoot.rotation.y = this.slideBlend * 0.12;
+    this.weaponRoot.rotation.z = (moving ? Math.sin(this.elapsed * 5) * 0.012 : 0) + this.sprintBlend * 0.05 + this.slideBlend * 0.16;
+    const redDot = document.getElementById('red-dot');
+    if (redDot) redDot.style.opacity = String(this.aimBlend);
+    if (this.viewHands) this.viewHands.position.y = lerp(this.viewHands.position.y, -this.slideBlend * 0.1 - this.sprintBlend * 0.04, 1 - Math.exp(-dt * 10));
+    if (this.firing && (WEAPONS[this.weaponIndex].auto || this.cheats.auto || !this.shotThisHold)) this.fireWeapon();
     if (this.comboTimer > 0) this.comboTimer -= dt;
     else this.combo = lerp(this.combo, 1, dt * 3);
   }
@@ -997,11 +1169,13 @@ export class Game {
   pickDemoTarget(origin) {
     let best = null;
     let bestDistance = Infinity;
+    const aim = new THREE.Vector3();
     for (const enemy of this.enemies) {
-      if (enemy.dead || enemy.phased || enemy.spawnTime > 0) continue;
-      const point = enemy.group.position.clone().add(new THREE.Vector3(0, enemy.type === 'boss' ? 3.2 : enemy.height * 0.55, 0));
-      const distance = point.distanceTo(origin);
-      if (distance < bestDistance) { bestDistance = distance; best = point; }
+      if (enemy.dead || enemy.phased) continue;
+      this.getAimPoint(enemy, aim);
+      if (!this.hasLineOfSight(origin, aim)) continue;
+      const distance = aim.distanceTo(origin);
+      if (distance < bestDistance) { bestDistance = distance; best = aim.clone(); }
     }
     return best;
   }
@@ -1050,7 +1224,7 @@ export class Game {
     if (!action) return;
     if (action === 'help') { this.toggleCheatConsole(true); this.cheatToast(CHEAT_LABELS.help); return; }
     if (action === 'purge') { this.cheatPurge(); this.cheatToast(CHEAT_LABELS.purge + ' 已执行'); return; }
-    if (action === 'arsenal') { this.unlockedWeapon = WEAPONS.length - 1; this.updateHUD(true); this.cheatToast(CHEAT_LABELS.arsenal); this.refreshCheatBadge(); return; }
+    if (action === 'arsenal') { this.loadout = WEAPONS.map((_, i) => i); this.unlockedWeapon = WEAPONS.length - 1; this.updateHUD(true); this.cheatToast(CHEAT_LABELS.arsenal); this.refreshCheatBadge(); return; }
     if (action === 'recharge') { this.cheatRecharge(); this.cheatToast(CHEAT_LABELS.recharge); this.refreshCheatBadge(); return; }
     if (action === 'overbound') { Object.keys(this.cheats).forEach((k) => { this.cheats[k] = true; }); this.cheatToast(CHEAT_LABELS.overbound); this.refreshCheatBadge(); return; }
     if (action === 'standdown') { Object.keys(this.cheats).forEach((k) => { this.cheats[k] = false; }); this.firing = false; this.aimTarget = null; this.updateLockReticle(null); this.cheatToast(CHEAT_LABELS.standdown); this.refreshCheatBadge(); return; }
@@ -1062,27 +1236,119 @@ export class Game {
     this.refreshCheatBadge();
   }
 
-  /** 锁头 / 自动射击：每帧选取最贴近准星的敌人，平滑吸附其头部弱点。 */
+  // ===== 统一瞄准基础：瞄头线 / 视线遮挡 / 宽容命中 =====
+
+  /**
+   * 所有敌人共用的瞄准点。优先取「头部弱点网格」的世界坐标——它正是射线会命中并
+   * 触发暴击的那块网格，所以瞄的地方和命中判定永远一致；悬浮 / 固定 / 首领单位
+   * 不再靠 height*0.85 硬猜。出生缩放动画期间回退到按模型高度推算的点。
+   */
+  getAimPoint(enemy, out = new THREE.Vector3()) {
+    const wp = enemy.weakpoints && enemy.weakpoints[0];
+    if (wp && enemy.spawnTime <= 0 && enemy.group.scale.x > 0.9) {
+      wp.updateWorldMatrix(true, false);
+      return wp.getWorldPosition(out);
+    }
+    const h = enemy.height || 2.2;
+    const base = enemy.baseY || 0;
+    const p = enemy.group.position;
+    return out.set(p.x, p.y + Math.max(base + 0.45, h * 0.7), p.z);
+  }
+
+  /** 墙体规则：两点之间是否被实体遮挡体挡住（地面与装饰不参与判定）。 */
+  hasLineOfSight(origin, point, pad = 0.4) {
+    const dir = point.clone().sub(origin);
+    const dist = dir.length();
+    if (dist <= pad) return true;
+    dir.normalize();
+    this.losRay.set(origin, dir);
+    this.losRay.far = dist - pad;
+    return this.losRay.intersectObjects(this.worldColliders, false).length === 0;
+  }
+
+  /** 爆炸 / 冲击波不得穿墙：墙后的敌人不吃 AoE，与子弹使用同一套遮挡规则。 */
+  blastReaches(center, enemy) {
+    const from = center.clone();
+    from.y = Math.max(0.9, from.y + 0.6);
+    return this.hasLineOfSight(from, this.getAimPoint(enemy), 0.9);
+  }
+
+  /** 一帧位移是否穿过实体墙：高速弹丸的防隧穿判定。 */
+  segmentBlocked(from, to, pad = 0.12) {
+    const dir = to.clone().sub(from);
+    const dist = dir.length();
+    if (dist <= pad) return false;
+    dir.normalize();
+    this.losRay.set(from, dir);
+    this.losRay.far = dist;
+    return this.losRay.intersectObjects(this.worldColliders, false).length > 0;
+  }
+
+  /** 宽容命中：射线擦身而过时，按统一瞄点到射线的垂直距离做球形补偿。 */
+  findTolerantHit(origin, direction, wallDistance) {
+    let best = null;
+    let bestAlong = Infinity;
+    const aim = new THREE.Vector3();
+    const v = new THREE.Vector3();
+    for (const enemy of this.enemies) {
+      if (enemy.dead || enemy.phased || enemy.spawnTime > 0) continue;
+      this.getAimPoint(enemy, aim);
+      v.copy(aim).sub(origin);
+      const along = v.dot(direction);
+      if (along <= 0 || along > wallDistance) continue;
+      const perpendicular = v.addScaledVector(direction, -along).length();
+      const tolerance = (enemy.radius || 0.6) + 0.4 + (this.missStreak >= 4 ? 0.32 : 0);
+      if (perpendicular > tolerance) continue;
+      if (!this.hasLineOfSight(origin, aim)) continue;
+      if (along < bestAlong) { bestAlong = along; best = enemy; }
+    }
+    return best;
+  }
+
+  /**
+   * 透视：只有开启 X-RAY 时才让敌人本体与血条穿透墙体；关闭时恢复深度遮挡，
+   * 修复「不开透视血条也一直穿墙」的异常。
+   */
+  applyXray() {
+    const on = Boolean(this.cheats.wall);
+    if (this.xrayState !== on) {
+      this.xrayState = on;
+      for (const enemy of this.enemies) {
+        enemy.fadeMaterials.forEach((m) => { m.depthTest = !on; m.needsUpdate = true; });
+        if (enemy.healthBar) {
+          enemy.healthBar.children.forEach((child) => { child.material.depthTest = !on; child.material.needsUpdate = true; });
+          enemy.healthBar.renderOrder = on ? 999 : 0;
+        }
+      }
+    }
+    for (const enemy of this.enemies) {
+      if (enemy.dead || !enemy.healthBar) continue;
+      enemy.healthBar.visible = on || enemy.health < enemy.maxHealth;
+    }
+  }
+
+  /** 锁头 / 自动射击：按距离近→远选靶、视线过滤、同帧同步相机。 */
   updateCheats(dt) {
     const c = this.cheats;
-    for (const e of this.enemies) {
-      if (e.dead || !e.healthBar) continue;
-      e.healthBar.visible = c.wall ? true : (e.health < e.maxHealth);
-    }
+    this.applyXray();
     if (c.lock || c.auto) {
       const origin = this.camera.getWorldPosition(new THREE.Vector3());
-      const target = this.pickCheatTarget(origin);
+      const dir = this.camera.getWorldDirection(new THREE.Vector3());
+      const target = this.pickCheatTarget(origin, dir);
       this.aimTarget = target;
       if (target) {
-        const head = target.group.position.clone().add(new THREE.Vector3(0, Math.min(target.height * 0.85, target.height - 0.2), 0));
+        const head = this.getAimPoint(target);
         const dx = head.x - origin.x, dy = head.y - origin.y, dz = head.z - origin.z;
         const desiredYaw = Math.atan2(-dx, -dz);
         let delta = desiredYaw - this.yaw;
         while (delta > Math.PI) delta -= Math.PI * 2;
         while (delta < -Math.PI) delta += Math.PI * 2;
-        this.yaw += delta * Math.min(1, dt * 9);
+        this.yaw += delta * Math.min(1, dt * 11);
         const horizontal = Math.hypot(dx, dz);
-        this.pitch = lerp(this.pitch, Math.atan2(dy, horizontal), Math.min(1, dt * 9));
+        this.pitch = lerp(this.pitch, Math.atan2(dy, horizontal), Math.min(1, dt * 11));
+        // 同帧同步相机：锁环投影与本帧 fireWeapon 都用最新朝向，不再慢一帧。
+        this.camera.rotation.set(this.pitch, this.yaw, 0);
+        this.camera.updateMatrixWorld(true);
         if (c.auto) this.firing = true;
       } else if (c.auto) {
         this.firing = false;
@@ -1098,23 +1364,31 @@ export class Game {
     }
   }
 
-  /** 选取最贴近当前准星的敌人（锁头 / 自动射击共用）。 */
-  pickCheatTarget(origin) {
-    const dir = this.camera.getWorldDirection(new THREE.Vector3());
-    let best = null;
-    let bestScore = Infinity;
-    for (const e of this.enemies) {
-      if (e.dead || e.phased || e.spawnTime > 0) continue;
-      const head = e.group.position.clone().add(new THREE.Vector3(0, Math.min(e.height * 0.85, e.height - 0.2), 0));
-      const to = head.clone().sub(origin);
-      const dist = to.length();
+  /**
+   * 自动瞄准选靶：候选按距离由近到远排序；只有视线通畅的目标才能被锁定；
+   * 当前目标仍有效且没有被明显更近的目标取代时保持不变（稳定切换，不来回跳）。
+   */
+  pickCheatTarget(origin, dir = null) {
+    const list = [];
+    for (const enemy of this.enemies) {
+      if (enemy.dead || enemy.phased) continue;
+      const aim = this.getAimPoint(enemy);
+      const dist = aim.distanceTo(origin);
       if (dist > 95) continue;
-      to.normalize();
-      const ang = Math.acos(clamp(dir.dot(to), -1, 1));
-      const score = ang * 28 + dist * 0.08;
-      if (score < bestScore) { bestScore = score; best = e; }
+      if (!this.hasLineOfSight(origin, aim)) continue;
+      const facing = dir ? clamp(dir.dot(aim.clone().sub(origin).normalize()), -1, 1) : 1;
+      // 出生动画中的单位也能被锁定（解决「偶尔锁不到」），只是排序优先级略低
+      const rank = dist + (enemy.spawnTime > 0 ? 5 : 0) - (facing > 0.3 ? 3 : 0);
+      list.push({ enemy, dist, rank });
     }
-    return best;
+    list.sort((a, b) => a.rank - b.rank);
+    if (!list.length) return null;
+    const current = this.aimTarget;
+    if (current && !current.dead && !current.phased) {
+      const still = list.find((item) => item.enemy === current);
+      if (still && (list[0].enemy === current || still.dist <= list[0].dist + 6)) return current;
+    }
+    return list[0].enemy;
   }
 
   /** 在锁定目标头部绘制锁环准星。 */
@@ -1122,8 +1396,7 @@ export class Game {
     const el = document.getElementById('lock-reticle');
     if (!el) return;
     if (!target) { el.classList.remove('show'); return; }
-    const head = target.group.position.clone().add(new THREE.Vector3(0, Math.min(target.height * 0.85, target.height - 0.2), 0));
-    const v = head.project(this.camera);
+    const v = this.getAimPoint(target).project(this.camera);
     if (v.z > 1) { el.classList.remove('show'); return; }
     el.style.left = `${(v.x * 0.5 + 0.5) * innerWidth}px`;
     el.style.top = `${(-v.y * 0.5 + 0.5) * innerHeight}px`;
@@ -1133,7 +1406,7 @@ export class Game {
   /** 清场：秒杀当前所有敌人。 */
   cheatPurge() {
     for (const e of this.enemies) {
-      if (e.dead || e.phased || e.spawnTime > 0) continue;
+      if (e.dead) continue;
       this.damageEnemy(e, 99999, new THREE.Vector3(0, 1, 0), { critical: true, critRoll: true });
     }
     this.spawnParticles(this.camera.getWorldPosition(new THREE.Vector3()), 0xff4d6d, 26, 5);
@@ -1198,6 +1471,9 @@ export class Game {
     const state = this.weaponState[this.weaponIndex];
     const player = this.player;
     const overdrive = player.overdrive > 0;
+    // origin / baseDirection 必须早于火箭分支求出：此前火箭分支先引用后声明，会直接抛 ReferenceError。
+    const origin = this.camera.getWorldPosition(new THREE.Vector3());
+    const baseDirection = this.camera.getWorldDirection(new THREE.Vector3());
     const infinite = overdrive || this.cheats.ammo;
     if (state.ammo <= 0 && !infinite) {
       this.audio.empty();
@@ -1219,8 +1495,6 @@ export class Game {
     }
     this.muzzleTimer = 0.055;
     this.audio.shot(weapon.id);
-    const origin = this.camera.getWorldPosition(new THREE.Vector3());
-    const baseDirection = this.camera.getWorldDirection(new THREE.Vector3());
     if (this.isTouch) {
       const assisted = this.getAimAssist(origin, baseDirection);
       if (assisted) baseDirection.copy(assisted);
@@ -1238,10 +1512,19 @@ export class Game {
       this.raycaster.far = weapon.range;
       const wallHits = this.raycaster.intersectObjects(this.worldColliders, false);
       const wallDistance = wallHits.length ? wallHits[0].distance : weapon.range;
-      const hits = this.raycaster.intersectObjects(this.enemyHitMeshes, false).filter((hit) => {
+      let hits = this.raycaster.intersectObjects(this.enemyHitMeshes, false).filter((hit) => {
         const target = hit.object.userData.enemy;
         return target && !target.dead && !target.phased && hit.distance < wallDistance;
       });
+      // 命中宽容：子弹有散布偏移、目标在移动，射线常常擦身而过。
+      // 用「统一瞄点 + 球形补偿」兜底；连续 4 发落空后窗口再放宽一次，保证不会一直打不中。
+      if (!hits.length && !weapon.rocket) {
+        const forgiving = this.findTolerantHit(origin, direction, wallDistance);
+        if (forgiving) {
+          const point = this.getAimPoint(forgiving).clone();
+          hits = [{ object: { userData: { enemy: forgiving, critical: Boolean(forgiving.weakpoints?.length) } }, point, distance: origin.distanceTo(point), tolerant: true }];
+        }
+      }
       const barrelHits = this.raycaster.intersectObjects(this.barrelMeshes, false).filter((hit) => {
         const barrel = hit.object.userData.barrel;
         return barrel && !barrel.dead && hit.distance < wallDistance;
@@ -1262,8 +1545,9 @@ export class Game {
           if (uniqueEnemies.includes(enemy)) continue;
           uniqueEnemies.push(enemy);
           const critical = hit.object.userData.critical;
-          const critRoll = Math.random() < player.critChance;
+          const critRoll = Math.random() < player.critChance + (weapon.critBonus || 0);
           const amount = weapon.damage * player.damageMultiplier * (overdrive ? 1.5 : 1) * (critical ? 1.65 : 1) * (critRoll ? player.critMultiplier : 1);
+          if (this.mission?.id === 'headshot' && hit.object.userData.critical) this.addMissionProgress();
           const killed = this.damageEnemy(enemy, amount, direction, { critical: Boolean(critical || critRoll), critRoll });
           if (weapon.chain) this.chainLightning(enemy, hit.point, amount, weapon.chain + player.chainBonus, new Set(uniqueEnemies));
           if (weapon.frost) {
@@ -1284,10 +1568,13 @@ export class Game {
       if (pellet === 0 || weapon.id === 'shotgun') this.createTracer(origin, endpoint, weapon.id === 'rail' ? 0x72caff : weapon.id === 'shotgun' ? 0xffb464 : weapon.id === 'arc' ? 0x7de8ff : 0x71ffdb, weapon.id === 'rail' ? 0.22 : 0.07);
     }
     if (anyHit) {
+      this.missStreak = 0;
       this.shotsHit += 1;
       this.addEnergy(1.4);
       this.audio.hit();
       this.callbacks.onHit(anyKill);
+    } else {
+      this.missStreak = Math.min(9, this.missStreak + 1);
     }
   }
 
@@ -1316,7 +1603,7 @@ export class Game {
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.phased) continue;
       const distance = enemy.group.position.distanceTo(center);
-      if (distance < aoe + enemy.radius) {
+      if (distance < aoe + enemy.radius && this.blastReaches(center, enemy)) {
         if (this.damageEnemy(enemy, projectile.damage * (1 - distance / (aoe + enemy.radius) * 0.4), center.clone().sub(enemy.group.position).setY(0).normalize())) kills += 1;
       }
     }
@@ -1352,7 +1639,7 @@ export class Game {
     for (const enemy of this.enemies) {
       if (enemy.dead) continue;
       const distance = enemy.group.position.distanceTo(center);
-      if (distance < aoe + enemy.radius) {
+      if (distance < aoe + enemy.radius && this.blastReaches(center, enemy)) {
         if (this.damageEnemy(enemy, 120 * (1 - distance / (aoe + enemy.radius) * 0.5), center.clone().sub(enemy.group.position).setY(0).normalize())) kills += 1;
       }
     }
@@ -1360,6 +1647,7 @@ export class Game {
     for (const other of this.barrels) {
       if (!other.dead && other !== barrel && other.group.position.distanceTo(center) < 4.5) this.damageBarrel(other, 999, new THREE.Vector3());
     }
+    if (this.mission?.id === 'barrel' && kills > 0) this.addMissionProgress(kills);
     if (kills >= 2) this.unlockAchievement('barrel');
   }
 
@@ -1389,7 +1677,8 @@ export class Game {
       for (const enemy of this.enemies) {
         if (enemy.dead || enemy.phased || visited.has(enemy)) continue;
         const distance = enemy.group.position.distanceTo(from);
-        if (distance < bestDistance) { bestDistance = distance; best = enemy; }
+        if (distance >= bestDistance || !this.hasLineOfSight(from, this.getAimPoint(enemy), 0.7)) continue;
+        bestDistance = distance; best = enemy;
       }
       if (!best) break;
       visited.add(best);
@@ -1424,8 +1713,9 @@ export class Game {
     const maxRange = this.isBoard ? 60 : 45;
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.spawnTime > 0 || enemy.phased) continue;
-      const target = enemy.group.position.clone().add(new THREE.Vector3(0, enemy.type === 'boss' ? 3 : enemy.height * 0.5, 0));
-      const toTarget = target.sub(origin);
+      const aim = this.getAimPoint(enemy);
+      if (!this.hasLineOfSight(origin, aim)) continue;
+      const toTarget = aim.sub(origin);
       const distance = toTarget.length();
       if (distance > maxRange) continue;
       toTarget.normalize();
@@ -1443,7 +1733,14 @@ export class Game {
       this.critCount += 1;
       if (this.critCount >= 10) this.unlockAchievement('crit-10');
     }
+    if (this.mission?.id === 'crit' && meta.critRoll) this.addMissionProgress();
+    if (this.mission?.id === 'combo' && this.hitCombo >= this.mission.target) this.addMissionProgress(this.mission.target);
     enemy.health -= final;
+    // 绝区零式反馈：连续命中数、短暂顿帧、暴击震屏
+    this.hitCombo = (this.hitCombo || 0) + 1;
+    this.hitComboTimer = 3.2;
+    this.hitStop = Math.max(this.hitStop || 0, meta.critical ? 0.05 : 0.022);
+    this.shake = Math.min(1.2, this.shake + (meta.critical ? 0.2 : 0.07));
     enemy.hitTimer = 0.07;
     enemy.healthBar.visible = true;
     const ratio = clamp(enemy.health / enemy.maxHealth, 0, 1);
@@ -1467,7 +1764,7 @@ export class Game {
       amount: Math.round(amount),
       x: (point.x * 0.5 + 0.5) * innerWidth,
       y: (-point.y * 0.5 + 0.5) * innerHeight,
-      critical, kill,
+      critical, kill, combo: this.hitCombo || 0,
     });
   }
 
@@ -1490,6 +1787,9 @@ export class Game {
     if (enemy.slow > 0) { this.frostKills = (this.frostKills || 0) + 1; if (this.frostKills >= 15) this.unlockAchievement('frostbite'); }
     const gained = Math.floor(enemy.score * this.combo);
     this.score += gained;
+    this.credits += Math.round(enemy.score * 0.12);
+    if (this.mode === 'gauntlet') this.waveTimeLeft = Math.min(90, this.waveTimeLeft + 2.5);
+    if (this.mission?.id === 'kills') this.addMissionProgress();
     this.player.health = Math.min(this.player.maxHealth, this.player.health + this.player.killHeal);
     this.player.shield = Math.min(this.player.maxShield, this.player.shield + this.player.killHeal * 0.75);
     const position = enemy.group.position.clone().add(new THREE.Vector3(0, enemy.type === 'boss' ? 3 : 1.1, 0));
@@ -1531,13 +1831,38 @@ export class Game {
   }
 
   switchWeapon(index) {
-    if (this.state !== 'playing' || index === this.weaponIndex || index > this.unlockedWeapon || index < 0) return;
+    if (this.state !== 'playing' || index === this.weaponIndex || !this.loadout.includes(index)) return;
     this.weaponIndex = index;
     this.reloadTimer = 0;
     this.switchTimer = 0.32;
     this.weaponRecoil = 0.8;
     this.buildWeaponModel(index);
     this.audio.ui();
+  }
+
+  /** 跳跃：短促抬升视角，落地带缓冲。player.position.y 保持不变，敌方瞄准不受影响。 */
+  jump() {
+    const p = this.player;
+    if (this.state !== 'playing' || !p.grounded || p.slideTime > 0 || p.dashTime > 0) return;
+    p.jumpVel = 7.1;
+    p.grounded = false;
+    this.audio.dash?.();
+  }
+
+  /** 滑铲：需正在移动；锁定当前方向加速滑行，压低视角并让武器自然倾斜。 */
+  slide() {
+    const p = this.player;
+    if (this.state !== 'playing' || p.slideTime > 0 || p.slideCooldown > 0 || !p.grounded) return;
+    const touch = this.touchMove && Math.hypot(this.touchMove.x, this.touchMove.y) > 0.2;
+    const moving = this.keys.KeyW || this.keys.KeyA || this.keys.KeyS || this.keys.KeyD || touch;
+    if (!moving) return;
+    p.slideTime = 0.62;
+    p.slideCooldown = 1.5;
+    p.slideDir = p.velocity.lengthSq() > 0.4
+      ? p.velocity.clone().setY(0).normalize()
+      : new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+    this.spawnParticles(p.position.clone().add(new THREE.Vector3(0, -1.5, 0)), 0x54f7d2, 8, 2.2);
+    this.audio.dash?.();
   }
 
   dash() {
@@ -1558,7 +1883,7 @@ export class Game {
     for (const enemy of this.enemies) {
       if (enemy.dead) continue;
       const distance = enemy.group.position.distanceTo(center);
-      if (distance <= this.player.pulseRadius) {
+      if (distance <= this.player.pulseRadius && this.blastReaches(center, enemy)) {
         const direction = enemy.group.position.clone().sub(center).setY(0).normalize();
         this.damageEnemy(enemy, this.player.pulseDamage * this.player.damageMultiplier * (1 - distance / this.player.pulseRadius * 0.35), direction);
         if (!enemy.dead) {
@@ -1686,6 +2011,11 @@ export class Game {
       if (this.nextWaveTimer <= 0) this.startWave();
       return;
     }
+    // 限时歼灭：倒计时归零即失败，击毁敌人可续时
+    if (this.mode === 'gauntlet' && this.waveTimeLeft > 0) {
+      this.waveTimeLeft -= dt;
+      if (this.waveTimeLeft <= 0) { this.waveTimeLeft = 0; this.end(false); return; }
+    }
     if (this.spawnQueue.length) {
       this.spawnTimer -= dt;
       if (this.spawnTimer <= 0) {
@@ -1698,13 +2028,84 @@ export class Game {
     if (!this.spawnQueue.length && !alive && !this.waveClearPending) {
       this.waveClearPending = true;
       if (this.wave > 0 && this.waveDamageTaken === 0) this.unlockAchievement('flawless');
+      if (this.mission?.id === 'flawless' && this.waveDamageTaken === 0) this.addMissionProgress(1);
+      if (this.clearedContent) this.rollFieldEvent();
       const runId = this.runId;
-      if (this.mode === 'campaign' && this.wave >= 10) {
+      if ((this.mode === 'campaign' || this.mode === 'gauntlet') && this.wave >= this.difficulty.waves) {
         setTimeout(() => { if (this.runId === runId && this.state === 'playing') this.end(true); }, 1200);
       } else {
         setTimeout(() => { if (this.runId === runId && this.state === 'playing' && this.waveClearPending) this.offerUpgrades(); }, 900);
       }
     }
+  }
+
+  /** 每波随机分配一个战术任务。 */
+  assignMission() {
+    const template = MISSIONS[Math.floor(Math.random() * MISSIONS.length)];
+    this.mission = { ...template, progress: 0, done: false };
+  }
+
+  addMissionProgress(amount = 1) {
+    const mission = this.mission;
+    if (!mission || mission.done) return;
+    mission.progress += amount;
+    if (mission.progress < mission.target) return;
+    mission.done = true;
+    const reward = Math.round(mission.reward * (this.missionBonus || 1));
+    this.credits += reward;
+    this.callbacks.onToast?.(`战术任务完成 // ${mission.text} · +${reward} CR`, 3400);
+    this.audio.upgrade();
+  }
+
+  /** 流动商人：悬浮机体 + 旋转光环 + 补给箱，靠近按 G 交易。 */
+  spawnFieldVendor() {
+    if (this.fieldVendor) return;
+    const group = new THREE.Group();
+    const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.75, 1.3, 8), new THREE.MeshStandardMaterial({ color: 0x1b3a33, emissive: 0x2fd8a8, emissiveIntensity: 0.5, metalness: 0.8, roughness: 0.3 }));
+    shell.position.y = 1.5;
+    const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 1), new THREE.MeshStandardMaterial({ color: 0x0d2420, emissive: 0x54f7d2, emissiveIntensity: 0.9, metalness: 0.7, roughness: 0.25 }));
+    head.position.y = 2.5;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.05, 6, 28), new THREE.MeshBasicMaterial({ color: this.clearedContent ? 0xff8ad2 : 0xffd45c, toneMapped: false }));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 1.2;
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe58a, toneMapped: false }));
+    beacon.position.y = 3.2;
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.7), new THREE.MeshStandardMaterial({ color: 0x243b36, emissive: 0x1a5a4a, emissiveIntensity: 0.4, metalness: 0.7 }));
+    crate.position.set(1.1, 0.25, 0);
+    group.add(shell, head, ring, beacon, crate);
+    const angle = random(-0.5, 0.5);
+    group.position.set(Math.sin(angle) * 14, 0, 12 + Math.cos(angle) * 3);
+    this.scene.add(group);
+    this.fieldVendor = { group, ring, beacon };
+    this.callbacks.onToast?.(this.clearedContent ? '军需官已抵达 // 精英补给 · 靠近按 G 交易' : '流动商人已抵达 // 靠近按 G 交易', 4200);
+  }
+
+  updateFieldVendor(dt) {
+    if (!this.fieldVendor) return;
+    this.fieldVendor.group.rotation.y += dt * 0.55;
+    this.fieldVendor.ring.rotation.z += dt * 1.3;
+    this.fieldVendor.beacon.position.y = 3.2 + Math.sin(this.elapsed * 3) * 0.12;
+    const distance = this.fieldVendor.group.position.distanceTo(this.player.position);
+    const el = document.getElementById('interact-toast');
+    if (el) {
+      const show = distance < 7 && this.state === 'playing';
+      el.textContent = show ? '按 G 与流动商人交易' : '';
+      el.classList.toggle('show', show);
+    }
+  }
+
+  /** 通关后开放：波次间随机战场事件，进一步扩充内容。 */
+  rollFieldEvent() {
+    const events = [
+      { text: '补给空投 // +260 CR', apply: (g) => { g.credits += 260; } },
+      { text: '情报官接入 // 本局任务奖励翻倍', apply: (g) => { g.missionBonus = 2; } },
+      { text: '工程师折扣 // 商店 8 折', apply: (g) => { g.shopDiscount = 0.8; } },
+      { text: '精英信号 // 下一波额外增援', apply: (g) => { g.eliteWave = 3; } },
+    ];
+    const event = events[Math.floor(Math.random() * events.length)];
+    event.apply(this);
+    this.fieldEvent = event.text;
+    this.callbacks.onToast?.(`战场事件 // ${event.text}`, 3600);
   }
 
   offerUpgrades() {
@@ -1717,8 +2118,73 @@ export class Game {
       const index = Math.floor(Math.random() * pool.length);
       this.currentUpgradeChoices.push(pool.splice(index, 1)[0]);
     }
-    this.callbacks.onUpgrades(this.currentUpgradeChoices);
+    // 战后补给站：波次结算奖励 + 随机武器/补给货架，首波结束即开放
+    this.credits += 110 + this.wave * 22;
+    this.currentShop = this.generateShop();
+    this.callbacks.onUpgrades({
+      upgrades: this.currentUpgradeChoices,
+      shop: this.currentShop,
+      credits: this.credits,
+      wave: this.wave,
+    });
     this.callbacks.onState('upgrade');
+  }
+
+  /** 每波刷新 3 件未持有武器 + 2 件消耗补给。 */
+  generateShop() {
+    const owned = new Set(this.loadout);
+    const candidates = WEAPONS.map((w, i) => ({ type: 'weapon', weaponIndex: i, name: w.name, category: w.category, price: Math.round(w.price * (this.shopDiscount || 1)), desc: w.desc }))
+      .filter((item) => !owned.has(item.weaponIndex));
+    const picks = [];
+    while (picks.length < 3 && candidates.length) picks.push(candidates.splice(Math.floor(Math.random() * candidates.length), 1)[0]);
+    return [...picks,
+      { type: 'repair', name: '纳米修复包', category: 'supply', price: 120, desc: '立即回满生命与护盾。' },
+      { type: 'ammo', name: '弹药补给箱', category: 'supply', price: 90, desc: '全部武器补满备用弹药。' },
+    ].map((item) => ({ ...item, sold: false }));
+  }
+
+  buyShopItem(index) {
+    const item = this.currentShop?.[index];
+    if (!item || item.sold || this.credits < item.price) return false;
+    this.credits -= item.price;
+    item.sold = true;
+    if (item.type === 'weapon') this.unlockWeapon(item.weaponIndex);
+    else if (item.type === 'repair') {
+      this.player.health = this.player.maxHealth;
+      this.player.shield = this.player.maxShield;
+    } else if (item.type === 'ammo') {
+      this.weaponState.forEach((state, i) => { state.ammo = WEAPONS[i].magazine; state.reserve = WEAPONS[i].reserve; });
+    }
+    this.audio.upgrade();
+    this.callbacks.onShop?.({ shop: this.currentShop, credits: this.credits });
+    return true;
+  }
+
+  /** 战场商人：靠近 NPC 时按 G 打开补给站。 */
+  openFieldShop() {
+    if (this.state !== 'playing' || !this.fieldVendor) return;
+    if (this.fieldVendor.group.position.distanceTo(this.player.position) > 7) {
+      this.callbacks.onToast?.('距离商人过远 // 靠近后按 G 交易', 1800);
+      return;
+    }
+    this.openShopStandalone();
+  }
+
+  openShopStandalone() {
+    if (this.state !== 'playing') return;
+    if (!this.currentShop?.length) this.currentShop = this.generateShop();
+    this.state = 'shop';
+    this.firing = false;
+    document.exitPointerLock?.();
+    this.callbacks.onShop?.({ shop: this.currentShop, credits: this.credits, standalone: true });
+    this.callbacks.onState?.('shop');
+  }
+
+  closeShopStandalone() {
+    if (this.state !== 'shop') return;
+    this.state = 'playing';
+    this.callbacks.onState?.('playing');
+    this.requestLock();
   }
 
   chooseUpgrade(index) {
@@ -1749,6 +2215,15 @@ export class Game {
     if (victory) {
       this.unlockAchievement('victory');
       if (this.difficulty.id === 'nightmare') this.unlockAchievement('nightmare');
+    }
+    // 通关基础战役（≥10 波）后永久解锁极限难度、军需官与战场事件
+    if (victory && this.wave >= 10) {
+      const first = !this.clearedContent;
+      try { localStorage.setItem('nexus-cleared', '1'); } catch (_) { /* storage unavailable */ }
+      this.clearedContent = true;
+      this.callbacks.onToast?.(first
+        ? '基础战役通关 // 解锁「极限」难度 · 军需官 · 战场事件 · 隐藏内容'
+        : '战役通关 // 进度已同步', 6000);
     }
     const career = this.saveCareer(victory);
     if (victory) this.audio.victory(); else this.audio.gameOver();
@@ -1782,6 +2257,10 @@ export class Game {
       energy: this.player.energy, energyMax: this.player.energyMax, overdrive: this.player.overdrive,
       difficulty: this.difficulty.label, critChance: this.player.critChance,
       intermission: this.intermission, elapsed: this.elapsed,
+      loadout: this.loadout, credits: this.credits, weaponSlot: this.loadout.indexOf(this.weaponIndex),
+      waveTotal: this.difficulty.waves, waveTimeLeft: this.waveTimeLeft,
+      mission: this.mission, clearedContent: this.clearedContent, fieldEvent: this.fieldEvent,
+      vendorNearby: Boolean(this.fieldVendor && this.fieldVendor.group.position.distanceTo(this.player.position) < 7),
       profile: this.profile, demo: this.demoMode, board: this.isBoard,
     });
   }
@@ -1838,23 +2317,27 @@ export class Game {
   animate() {
     requestAnimationFrame(this.animate);
     const dt = Math.min(this.clock.getDelta(), 0.05);
+    // 命中顿帧：极短时间放慢整个世界以强化打击感（绝区零式 hitstop），HUD 与波次计时不受影响
+    if (this.hitStop > 0) this.hitStop = Math.max(0, this.hitStop - dt);
+    const worldDt = this.hitStop > 0 ? dt * 0.22 : dt;
     this.animatedWorld.forEach(({ mesh, speed, axis, update }) => {
       if (update) update(dt, this.menuTime + this.elapsed);
       else if (axis) mesh.rotation[axis] += speed * dt;
     });
     if (this.dust) this.dust.rotation.y += dt * 0.003;
     if (this.state === 'playing') {
-      this.elapsed += dt;
+      this.elapsed += worldDt;
       this.hudTimer -= dt;
       this.radarTimer -= dt;
-      this.updateCheats(dt);
-      const cdt = this.cheats.slow ? dt * 0.4 : dt;
-      this.updatePlayer(dt);
+      this.updateCheats(worldDt);
+      const cdt = (this.cheats.slow ? 0.4 : 1) * worldDt;
+      this.updatePlayer(worldDt);
       this.updateEnemies(cdt);
       this.updateProjectiles(cdt);
       this.updatePickups(cdt);
       this.updateEffects(cdt);
       this.updateBarrels(cdt);
+      this.updateFieldVendor(worldDt);
       this.checkWave(dt);
       this.updateHUD();
       if (this.radarTimer <= 0) { this.radarTimer = 0.09; this.drawRadar(); }

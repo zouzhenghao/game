@@ -1,6 +1,6 @@
 import './style.css';
 import './board.css';
-import { Game, ACHIEVEMENTS, detectProfile } from './game/Game.js';
+import { Game, ACHIEVEMENTS, detectProfile, WEAPONS, WEAPON_CATEGORY_LABEL, DIFFICULTY } from './game/Game.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -15,6 +15,7 @@ $('#device-badge').textContent = deviceNames[deviceProfile];
 
 let selectedMode = 'campaign';
 let selectedDifficulty = 'standard';
+let selectedStartWeapon = 0;
 let lastMode = 'campaign';
 let game;
 let announceTimer;
@@ -25,19 +26,29 @@ let lastDamageNumber = 0;
 const modalTemplates = {
   briefing: `
     <div class="eyebrow">OPERATION / NEON ASHES</div><h2 id="modal-title">作战简报<span>.</span></h2>
-    <p class="modal-lead">02:17，第七区战术网络遭到不明机械军团入侵。你是最后一名仍可链接的「幽灵」作战员。</p>
-    <div class="briefing-grid"><div><b>01</b><strong>突破包围</strong><p>清理每一波敌对单位，利用掩体与冲刺避免被集火。</p></div><div><b>02</b><strong>适应战场</strong><p>每波结束从 15 种战术模块中三选一，逐步构筑专属打法。</p></div><div><b>03</b><strong>摧毁核心</strong><p>命中与击毁积攒能量，按 F 释放超载；第 10 波击败守望者。</p></div></div>
+    <p class="modal-lead">02:17，第七区战术网络遭到不明机械军团入侵。你是最后一名仍可链接的「幽灵」作战员。以下为 1.0 正式版的完整作战流程。</p>
+    <div class="briefing-grid"><div><b>01</b><strong>自定装备</strong><p>开局从手枪 / 步枪 / 狙击三选一，武器库共 15 把，按 1–6 切换已持有武器。</p></div><div><b>02</b><strong>战后补给</strong><p>首波结束即开放补给站：用信用点购买武器与补给，再从肉鸽模块中三选一强化。</p></div><div><b>03</b><strong>战术任务</strong><p>每波随机任务与章节剧情推进；第 3 / 6 / 9 波出现流动商人，靠近按 G 交易。</p></div><div><b>04</b><strong>摧毁核心</strong><p>难度决定通关波数（10 / 15 / 20 / 25 波），最终波迎战守望者；通关后解锁极限难度与战场事件。</p></div></div>
     <div class="intel-row v2"><span>红色敌人擅长突袭</span><span>紫色敌人远程攻击</span><span>橙色重装移动缓慢</span><span>青色幽影会相位隐形</span><span>黄色蜂群贴近后自毁</span><span>绿色单元会修复友军</span><span>琥珀炮台定点轰炸</span><span>青柠游隼高速俯冲</span><span>油桶可被引爆</span></div>`,
   armory: `
     <div class="eyebrow">TACTICAL LOADOUT / NX SERIES</div><h2 id="modal-title">武器库<span>.</span></h2><p class="modal-lead">六把武器均在行动中按波次自动解锁。按 1–6 或滚轮快速切换。</p>
     <div class="armory-list"><article><div class="weapon-silhouette rifle">VX-9</div><div><small>01 / 初始装备</small><h3>VX-9 脉冲</h3><p>稳定的全自动脉冲步枪，适合中距离持续压制。</p><span>伤害 24　·　射速 9/s　·　弹匣 30</span></div></article><article><div class="weapon-silhouette shotgun">SG-12</div><div><small>02 / 第 2 波解锁</small><h3>SG-12 裂解</h3><p>八枚高能弹丸同时释放，近距离可造成毁灭性伤害。</p><span>伤害 14×8　·　射速 1.2/s　·　弹匣 6</span></div></article><article><div class="weapon-silhouette rail">R-01</div><div><small>03 / 第 4 波解锁</small><h3>R-01 磁轨</h3><p>高精度磁轨射线，贯穿一条直线上的所有敌人。</p><span>伤害 135　·　射速 0.8/s　·　弹匣 5</span></div></article><article class="v2"><div class="weapon-silhouette rail">ARC-7</div><div><small>04 / 第 6 波解锁</small><h3>ARC-7 弧光</h3><p>发射链式电弧，命中后自动跳跃到附近敌人，最多连锁 3 个目标。</p><span>伤害 46　·　射速 3.4/s　·　弹匣 24</span></div></article><article class="v2"><div class="weapon-silhouette rocket">WN-5</div><div><small>05 / 第 8 波解锁</small><h3>WN-5 蜂巢</h3><p>六管制导发射器，导弹自动锁定最近敌人，命中后产生范围爆炸，可连爆油桶。</p><span>伤害 120　·　射速 1.1/s　·　弹匣 4</span></div></article><article class="v2"><div class="weapon-silhouette frost">LN-3</div><div><small>06 / 第 9 波解锁</small><h3>LN-3 寒霜</h3><p>低温步枪，命中使敌人减速 50%，是控场与切断冲锋的核心手段。</p><span>伤害 30　·　射速 4.2/s　·　弹匣 22</span></div></article></div>`,
   controls: `
     <div class="eyebrow">NEURAL INTERFACE / MANUAL</div><h2 id="modal-title">操作指南<span>.</span></h2>
-    <div class="controls-grid"><div><h3>键鼠操作</h3><p><kbd>W A S D</kbd><span>移动</span></p><p><kbd>鼠标</kbd><span>观察 / 瞄准</span></p><p><kbd>左键 / 右键</kbd><span>射击 / 精确瞄准</span></p><p><kbd>Shift</kbd><span>疾跑</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载（能量满时）</span></p><p><kbd>R / 1–6</kbd><span>装填 / 切换六把武器</span></p><p><kbd>ESC / P</kbd><span>暂停</span></p></div><div><h3>触屏操作</h3><p><kbd>左侧摇杆</kbd><span>移动</span></p><p><kbd>右侧滑动</kbd><span>观察 / 瞄准</span></p><p><kbd>FIRE</kbd><span>按住连续射击</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载</span></p><p><kbd>R / ⇄</kbd><span>装填 / 切换武器</span></p><p><kbd>Ⅱ</kbd><span>暂停</span></p><small>手机端会自动辅助瞄准近距离目标。</small></div></div>
-    <p class="modal-lead" style="margin-top:16px">首页「威胁校准」可选择新兵 / 标准 / 噩梦三档难度，影响敌人强度、掉落率与积分倍率。</p>
-    <div class="board-note"><h3>希沃白板 / 教学一体机</h3><p>首页「设备适配」选择「白板大屏」：全部按钮放大到适合手指点击，支持红外多点触控（一人移动、一人开火），弹药打空自动装填，无需键盘鼠标。点 <kbd>AUTO</kbd> 开启课堂演示，自动锁定最近目标并持续开火，适合投屏讲解；<kbd>◎</kbd> 为精确瞄准。</p></div>
+    <div class="controls-grid"><div><h3>键鼠操作</h3><p><kbd>W A S D</kbd><span>移动</span></p><p><kbd>鼠标</kbd><span>观察 / 瞄准</span></p><p><kbd>左键 / 右键</kbd><span>射击 / 精确瞄准</span></p><p><kbd>Shift</kbd><span>疾跑（武器下沉）</span></p><p><kbd>Space</kbd><span>跳跃</span></p><p><kbd>Ctrl / C</kbd><span>滑铲</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载（能量满时）</span></p><p><kbd>G</kbd><span>靠近 NPC 商人时交易</span></p><p><kbd>R / 1–6</kbd><span>装填 / 切换已持有武器</span></p><p><kbd>ESC / P</kbd><span>暂停</span></p></div><div><h3>触屏操作</h3><p><kbd>左侧摇杆</kbd><span>移动</span></p><p><kbd>右侧滑动</kbd><span>观察 / 瞄准</span></p><p><kbd>FIRE</kbd><span>按住连续射击</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载</span></p><p><kbd>R / ⇄</kbd><span>装填 / 切换武器</span></p><p><kbd>Ⅱ</kbd><span>暂停</span></p><small>手机端会自动辅助瞄准近距离目标。</small></div></div>
+    <p class="modal-lead" style="margin-top:16px">首页「威胁校准」共四档：新兵 10 波、标准 15 波、噩梦 20 波，通关任意战役后解锁「极限」25 波。难度同时影响敌人强度、掉落率、积分倍率与通关波数。</p>
+    <div class="board-note"><h3>希沃白板 / 教学一体机</h3><p>首页「设备适配」选择「白板大屏」：左下角<strong>「移动 / MOVE」高对比圆形摇杆</strong>常显（含方向箭头与中心十字），右侧滑动转向，右下 <kbd>FIRE</kbd> 开火，底部技能排含跳跃 / 滑铲 / 冲刺 / 脉冲 / 超载 / 切枪 / 瞄准 / 演示。全部按钮 ≥64px，支持红外多点触控，弹药打空自动装填，无需键盘鼠标。点 <kbd>AUTO</kbd> 开启课堂演示（自动锁敌开火）；<kbd>◎</kbd> 为精确瞄准。</p></div>
     <div class="board-note" style="border-color:#ff4d6d44"><h3>越界协议 // OVERBOUND 作弊码</h3><p>单机训练用外挂。游戏中直接敲字母触发（大小写均可）：<kbd>LOCKON</kbd> 锁头、<kbd>AUTOFIRE</kbd> 自动射击、<kbd>GODMODE</kbd> 无敌、<kbd>INFINITY</kbd> 无限弹药、<kbd>XRAY</kbd> 透视、<kbd>TIMESLIP</kbd> 子弹时间、<kbd>PURGE</kbd> 清场、<kbd>ARSENAL</kbd> 全武器、<kbd>RECHARGE</kbd> 回满、<kbd>OVERBOUND</kbd> 全开、<kbd>STANDDOWN</kbd> 全关。按 <kbd>&#96;</kbd> 或 <kbd>↑↑↓↓←→←→BA</kbd> 展开作弊清单。</p></div>`
 };
+
+/** 武器库：按手枪 / 步枪 / 狙击 / 特殊四类展示全部 15 把，标注价格与获取方式。 */
+function armoryTemplate() {
+  const groups = ['pistol', 'rifle', 'sniper', 'special'].map((category) => {
+    const items = WEAPONS.map((w, i) => ({ ...w, i })).filter((w) => w.category === category);
+    const cards = items.map((w) => `<article class="${w.i >= 6 ? 'v2' : ''}"><div class="weapon-silhouette ${category}">${w.name.split(' ')[0]}</div><div><small>${w.i >= 6 ? 'V1.0 新增' : '制式装备'} · ${w.price} CR</small><h3>${w.name}</h3><p>${w.desc}</p><span>伤害 ${w.damage}　·　射速 ${w.fireRate}/s　·　弹匣 ${w.magazine}</span></div></article>`).join('');
+    return `<div class="armory-group"><h3>${WEAPON_CATEGORY_LABEL[category]}<small>${items.length} 把</small></h3><div class="armory-list">${cards}</div></div>`;
+  }).join('');
+  return `<div class="eyebrow">TACTICAL LOADOUT / NX SERIES</div><h2 id="modal-title">武器库<span>.</span></h2><p class="modal-lead">15 把武器分为手枪 / 步枪 / 狙击 / 特殊四类。开局任选一把作为起始装备，其余在战后补给站购买或按波次配发。按 1–6 切换已持有武器。</p>${groups}`;
+}
 
 function careerTemplate() {
   let career = { runs: 0, kills: 0, wins: 0, bestCombo: 1, achievements: [] };
@@ -52,7 +63,9 @@ function careerTemplate() {
 }
 
 function showModal(type) {
-  $('#modal-content').innerHTML = type === 'career' ? careerTemplate() : modalTemplates[type];
+  $('#modal-content').innerHTML = type === 'career' ? careerTemplate()
+    : type === 'armory' ? armoryTemplate()
+      : modalTemplates[type];
   $('#modal-backdrop').classList.add('active');
 }
 function closeModal() { $('#modal-backdrop').classList.remove('active'); }
@@ -68,9 +81,29 @@ $$('.mode-card').forEach((button) => button.addEventListener('click', () => {
 }));
 
 $$('.difficulty-chip').forEach((button) => button.addEventListener('click', () => {
+  if (button.dataset.difficulty === 'apex' && localStorage.getItem('nexus-cleared') !== '1') {
+    toast('「极限」难度需先通关核心行动（≥ 10 波）', 3200);
+    button.classList.add('locked-chip');
+    return;
+  }
   $$('.difficulty-chip').forEach((item) => item.classList.remove('selected'));
   button.classList.add('selected');
   selectedDifficulty = button.dataset.difficulty;
+  game?.audio.ui();
+}));
+
+function updateUnlockBanner() {
+  const cleared = localStorage.getItem('nexus-cleared') === '1';
+  $('#unlock-banner').innerHTML = cleared
+    ? '<b>◆ 基础战役已通关</b><span>已解锁「极限」难度 · 军需官 · 战场事件 · 隐藏内容</span>'
+    : '<b>◇ 战役进度</b><span>通关 ≥ 10 波后解锁极限难度、军需官与战场事件</span>';
+  $('.locked-chip')?.classList.toggle('unlocked', cleared);
+}
+
+$$('.start-weapon-chip').forEach((button) => button.addEventListener('click', () => {
+  $$('.start-weapon-chip').forEach((item) => item.classList.remove('selected'));
+  button.classList.add('selected');
+  selectedStartWeapon = Number(button.dataset.start);
   game?.audio.ui();
 }));
 
@@ -95,9 +128,10 @@ $$('.device-chip').forEach((button) => {
 
 function setState(state, data = {}) {
   $('#menu-screen').classList.toggle('active', state === 'menu');
-  $('#hud').classList.toggle('active', ['playing', 'paused', 'upgrade'].includes(state));
+  $('#hud').classList.toggle('active', ['playing', 'paused', 'upgrade', 'shop'].includes(state));
   $('#pause-screen').classList.toggle('active', state === 'paused');
   $('#upgrade-screen').classList.toggle('active', state === 'upgrade');
+  $('#shop-screen').classList.toggle('active', state === 'shop');
   $('#end-screen').classList.toggle('active', state === 'ended');
   if (state === 'menu') {
     updateRecords();
@@ -112,8 +146,11 @@ function updateHUD(data) {
   $('#shield-fill').style.width = `${Math.max(0, data.shield / data.maxShield * 100)}%`;
   $('#shield-value').textContent = Math.ceil(Math.max(0, data.shield));
   $('#wave-value').textContent = pad(data.wave);
-  $('#wave-total').textContent = data.mode === 'campaign' ? '/ 10' : '/ ∞';
-  $('#mode-label').textContent = { campaign: '核心行动', endless: '无尽裂隙', training: '模拟训练' }[data.mode];
+  $('#wave-total').textContent = data.mode === 'endless' ? '/ ∞' : `/ ${data.waveTotal || 15}`;
+  $('#mode-label').textContent = { campaign: '核心行动', endless: '无尽裂隙', training: '模拟训练', gauntlet: '限时歼灭' }[data.mode] || '核心行动';
+  const timer = $('#gauntlet-timer');
+  timer.textContent = data.mode === 'gauntlet' ? `剩余 ${Math.ceil(data.waveTimeLeft || 0)}s · 击杀续时` : '';
+  timer.classList.toggle('urgent', data.mode === 'gauntlet' && data.waveTimeLeft < 12);
   $('#difficulty-label').textContent = data.difficulty;
   $('#enemy-count').textContent = data.intermission ? '区域暂时安全' : `${data.enemies} 个敌对信号`;
   $('#score-value').textContent = pad(data.score, 6);
@@ -125,10 +162,15 @@ function updateHUD(data) {
   $('#reload-hint').classList.toggle('visible', data.ammo === 0 || data.reloading);
   $('#reload-hint').textContent = data.reloading ? '正在装填…' : '按 R 装填弹药';
   $('#crosshair').classList.toggle('reloading', data.reloading);
-  $$('.weapon-slots span').forEach((slot, index) => {
-    slot.classList.toggle('active', index === data.weaponIndex);
-    slot.classList.toggle('locked', index > data.unlockedWeapon);
-  });
+  const slotsHost = $('.weapon-slots');
+  const loadout = data.loadout || [0];
+  const signature = loadout.join(',');
+  if (slotsHost.dataset.signature !== signature) {
+    slotsHost.dataset.signature = signature;
+    slotsHost.innerHTML = loadout.slice(0, 6).map((absolute, i) => `<span data-slot="${absolute}">${i + 1}</span>`).join('');
+  }
+  $$('.weapon-slots span').forEach((slot) => slot.classList.toggle('active', Number(slot.dataset.slot) === data.weaponIndex));
+  $('#credits-value').textContent = `${Math.floor(data.credits || 0)} CR`;
   updateAbility('#ability-dash', data.dashCooldown, data.dashMax);
   updateAbility('#ability-pulse', data.pulseCooldown, data.pulseMax);
   const energyPct = data.overdrive > 0 ? 100 : data.energy / data.energyMax * 100;
@@ -140,7 +182,16 @@ function updateHUD(data) {
   $('#mobile-overdrive')?.classList.toggle('ready', ready);
   $('#boss-hud').classList.toggle('active', Boolean(data.boss));
   if (data.boss) $('#boss-fill').style.width = `${Math.max(0, data.boss.health / data.boss.maxHealth * 100)}%`;
-  $('#objective').classList.toggle('hidden', data.wave > 1 || data.elapsed > 12);
+  if (data.mission) {
+    $('#objective-label').textContent = data.mission.done ? '任务完成' : '战术任务';
+    $('#objective-title').textContent = data.mission.text;
+    $('#objective-sub').textContent = data.mission.done
+      ? `奖励已发放 · +${Math.round(data.mission.reward * (data.missionBonus || 1))} CR`
+      : `进度 ${Math.min(data.mission.progress, data.mission.target)} / ${data.mission.target} · 奖励 ${data.mission.reward} CR`;
+    $('#objective').classList.toggle('mission-done', data.mission.done);
+  }
+  $('#objective').classList.toggle('hidden', !data.mission && (data.wave > 1 || data.elapsed > 12));
+  if (data.vendorNearby) $('#objective-sub').textContent = '按 G 与流动商人交易 · 可购买武器与补给';
   if (data.board) {
     $('#board-badge').classList.toggle('demo', Boolean(data.demo));
     $('#board-demo-state').textContent = data.demo ? '自动演示中' : '手动操作';
@@ -183,10 +234,10 @@ function showAchievement(achievement) {
   achievementTimer = setTimeout(() => element.classList.remove('active'), 3000);
 }
 
-function showDamageNumber({ amount, x, y, critical, kill }) {
+function showDamageNumber({ amount, x, y, critical, kill, combo }) {
   const container = $('#damage-numbers');
   const now = performance.now();
-  if (container.children.length > 18 || now - lastDamageNumber < 18) return;
+  if (container.querySelectorAll('.damage-number').length > 18 || now - lastDamageNumber < 18) return;
   lastDamageNumber = now;
   const element = document.createElement('div');
   element.className = `damage-number${kill ? ' kill' : critical ? ' critical' : ''}`;
@@ -195,6 +246,16 @@ function showDamageNumber({ amount, x, y, critical, kill }) {
   element.style.top = `${y}px`;
   container.appendChild(element);
   setTimeout(() => element.remove(), 820);
+  // 绝区零式：命中后在敌人头顶弹出连续命中数
+  if (combo >= 2) {
+    const badge = document.createElement('div');
+    badge.className = `combo-popup${combo >= 10 ? ' hot' : ''}`;
+    badge.innerHTML = `<b>${combo}</b><span>HIT</span>`;
+    badge.style.left = `${x}px`;
+    badge.style.top = `${y - 48}px`;
+    container.appendChild(badge);
+    setTimeout(() => badge.remove(), 900);
+  }
 }
 
 function showBuild(data) {
@@ -223,10 +284,25 @@ function hit(kill = false) {
   if (kill) marker.classList.add('kill');
 }
 
-function showUpgrades(upgrades) {
+function renderShop(shop, credits, containerId, creditsId) {
+  const container = $(containerId);
+  if (!container || !shop) return;
+  if ($(creditsId)) $(creditsId).textContent = `${Math.floor(credits)} CR`;
+  container.innerHTML = shop.map((item, index) => `
+    <button class="shop-item${item.sold ? ' sold' : ''}" data-shop="${index}" ${item.sold || credits < item.price ? 'disabled' : ''}>
+      <small>${item.category === 'supply' ? '战场补给' : WEAPON_CATEGORY_LABEL[item.category] || '武器'}</small>
+      <strong>${item.name}</strong><p>${item.desc}</p><b>${item.sold ? '已购入' : `${item.price} CR`}</b>
+    </button>`).join('');
+  container.querySelectorAll('[data-shop]').forEach((button) => button.addEventListener('click', () => game.buyShopItem(Number(button.dataset.shop))));
+}
+
+function showUpgrades(payload) {
+  const { upgrades, shop, credits } = payload;
   $('#upgrade-options').innerHTML = upgrades.map((upgrade, index) => `
     <button class="upgrade-card" data-upgrade="${index}"><span class="upgrade-number">0${index + 1}</span><div class="upgrade-icon">${upgrade.icon}</div><small>${upgrade.type}</small><h3>${upgrade.name}</h3><p>${upgrade.description}</p><b>安装模块 ↗</b></button>`).join('');
   $$('[data-upgrade]').forEach((button) => button.addEventListener('click', () => game.chooseUpgrade(Number(button.dataset.upgrade))));
+  renderShop(shop, credits, '#shop-panel', '#shop-credits');
+  renderShop(shop, credits, '#shop-options', '#field-shop-credits');
 }
 
 function showEnd(data) {
@@ -250,6 +326,7 @@ function updateRecords() {
   const wave = Number(localStorage.getItem('nexus-best-wave') || 0);
   $('#best-score').textContent = pad(best, 6).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   $('#best-wave').textContent = `最高波次 ${pad(wave)}`;
+  updateUnlockBanner();
 }
 
 function damage(direction) {
@@ -267,7 +344,7 @@ function damage(direction) {
 function start(mode) {
   lastMode = mode;
   closeModal();
-  game.start(mode, selectedDifficulty);
+  game.start(mode, selectedDifficulty, selectedStartWeapon);
   $('#mobile-demo')?.classList.toggle('active', game.demoMode);
   $('#mobile-aim')?.classList.toggle('active', game.aiming);
 }
@@ -280,6 +357,13 @@ game = new Game($('#game-canvas'), $('#radar'), {
   onKill: addKillFeed,
   onHit: hit,
   onUpgrades: showUpgrades,
+  onShop: (payload) => {
+    if (payload.standalone) renderShop(payload.shop, payload.credits, '#shop-options', '#field-shop-credits');
+    else {
+      renderShop(payload.shop, payload.credits, '#shop-panel', '#shop-credits');
+      renderShop(payload.shop, payload.credits, '#shop-options', '#field-shop-credits');
+    }
+  },
   onDamage: damage,
   onBuild: showBuild,
   onAchievement: showAchievement,
@@ -296,6 +380,7 @@ window.nexusGame = game;
 
 // 越界协议 // OVERBOUND 作弊清单面板关闭
 $('#cheat-close').addEventListener('click', () => game.toggleCheatConsole(false));
+$('#shop-close').addEventListener('click', () => game.closeShopStandalone());
 // 点击作弊清单空白处也可关闭（仅当点击的是遮罩本身）
 $('#cheat-console').addEventListener('click', (event) => { if (event.target === $('#cheat-console')) game.toggleCheatConsole(false); });
 

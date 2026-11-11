@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#05090d" />
-    <meta name="description" content="NEXUS STRIKE 零界突击 V5.0——可直接在浏览器游玩的赛博科技风 3D 第一人称射击游戏，新增寒霜低温步枪（命中减速）、游隼突袭者、冰封脉冲等，并优化玩家与敌人平衡，支持电脑、手机与希沃白板大屏。" />
-    <title>NEXUS STRIKE // 零界突击 V4.0</title>
+    <meta name="description" content="NEXUS STRIKE 零界突击 1.0 正式版——浏览器里的赛博科技风 3D 第一人称射击游戏。15 把武器、9 类敌人、4 种模式、战后补给站与肉鸽强化、战术任务与故事线、NPC 商人、电脑/手机/希沃白板三端适配。" />
+    <title>NEXUS STRIKE // 零界突击 1.0 正式版</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305090d'/%3E%3Cpath d='M14 46V18h8l12 17V18h8v28h-8L22 29v17z' fill='%2354f7d2'/%3E%3Cpath d='M46 18h5v28h-5z' fill='%2354f7d2'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="./assets/index-D6D2clmA.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-qK55SczD.css">
+    <script type="module" crossorigin src="./assets/index-CqrIl6Ui.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CLPAN1SI.css">
   </head>
   <body>
     <div id="app">
@@ -44,11 +44,11 @@
             <div class="eyebrow"><span>NX-07</span> / 神经链接已建立</div>
             <h1><span class="title-outline">零界</span><br />突击<span class="title-dot">.</span></h1>
             <div class="english-title">NEXUS STRIKE</div>
-            <p class="hero-desc">城市防线已经失守。接入战术外骨骼，深入数据废墟，<br class="desktop-only" />在机械军团完成合围之前，撕开最后一道缺口。</p>
+            <p class="hero-desc">城市防线已经失守。接入战术外骨骼，深入数据废墟，<br class="desktop-only" />15 把武器、战后补给站与章节战役，在合围完成前撕开最后一道缺口。</p>
             <div class="mode-selector" role="group" aria-label="选择游戏模式">
               <button class="mode-card selected" data-mode="campaign">
                 <span class="mode-index">01</span>
-                <span><strong>核心行动</strong><small>10 波战斗 · 最终首领</small></span>
+                <span><strong>核心行动</strong><small>按难度 10–25 波 · 最终首领</small></span>
                 <i></i>
               </button>
               <button class="mode-card" data-mode="endless">
@@ -56,12 +56,24 @@
                 <span><strong>无尽裂隙</strong><small>持续增压 · 挑战极限</small></span>
                 <i></i>
               </button>
+              <button class="mode-card" data-mode="gauntlet">
+                <span class="mode-index">03</span>
+                <span><strong>限时歼灭</strong><small>击杀续时 · 节奏拉满</small></span>
+                <i></i>
+              </button>
+            </div>
+            <div class="loadout-picker" role="group" aria-label="选择起始武器">
+              <span class="difficulty-label">起始武器</span>
+              <button class="start-weapon-chip" data-start="6">PX-1<small>手枪 · 高暴击</small></button>
+              <button class="start-weapon-chip selected" data-start="0">VX-9<small>步枪 · 均衡</small></button>
+              <button class="start-weapon-chip" data-start="12">SR-2<small>狙击 · 高伤</small></button>
             </div>
             <div class="difficulty-selector" role="group" aria-label="选择难度">
               <span class="difficulty-label">威胁校准</span>
-              <button class="difficulty-chip" data-difficulty="recruit">新兵<small>轻松上手</small></button>
-              <button class="difficulty-chip selected" data-difficulty="standard">标准<small>推荐体验</small></button>
-              <button class="difficulty-chip" data-difficulty="nightmare">噩梦<small>高压挑战</small></button>
+              <button class="difficulty-chip" data-difficulty="recruit">新兵<small>10 波 · 轻松上手</small></button>
+              <button class="difficulty-chip selected" data-difficulty="standard">标准<small>15 波 · 推荐体验</small></button>
+              <button class="difficulty-chip" data-difficulty="nightmare">噩梦<small>20 波 · 高压挑战</small></button>
+              <button class="difficulty-chip locked-chip" data-difficulty="apex">极限<small>25 波 · 通关解锁</small></button>
             </div>
             <div class="device-selector" role="group" aria-label="设备适配">
               <span class="device-label">设备适配</span>
@@ -74,6 +86,7 @@
               <button id="start-button" class="primary-button"><span>开始行动</span><b>ENTER</b><i>↗</i></button>
               <button id="training-button" class="secondary-button"><span class="play-icon">▷</span> 模拟训练</button>
             </div>
+            <div id="unlock-banner" class="unlock-banner"></div>
             <div class="quick-controls"><span><kbd>WASD</kbd> 移动</span><span><kbd>鼠标</kbd> 瞄准</span><span><kbd>左键</kbd> 射击</span><span><kbd>F</kbd> 核心超载</span></div>
           </div>
 
@@ -95,7 +108,7 @@
         <footer class="menu-footer">
           <div class="record"><small>个人最佳纪录</small><strong id="best-score">000,000</strong><span>PTS</span></div>
           <div class="footer-line"></div>
-          <div class="system-info"><span>BUILD 5.1.0</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span><span id="device-badge">DEVICE / AUTO</span></div>
+          <div class="system-info"><span>BUILD 1.0.0</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span><span id="device-badge">DEVICE / AUTO</span></div>
           <div class="scroll-cue">系统待命 <i></i></div>
         </footer>
       </section>
@@ -106,13 +119,13 @@
           <div class="vital-row"><span>HP</span><div class="vital-bar"><i id="health-fill"></i></div><b id="health-value">100</b></div>
           <div class="vital-row shield"><span>SH</span><div class="vital-bar"><i id="shield-fill"></i></div><b id="shield-value">50</b></div>
         </div>
-        <div class="wave-info"><small><span id="mode-label">核心行动</span><em id="difficulty-label">标准</em></small><div>WAVE <strong id="wave-value">01</strong><span id="wave-total">/ 10</span></div><p><i></i><span id="enemy-count">0 个敌对信号</span><i></i></p></div>
-        <div class="hud-top-right"><div class="score-box"><small>作战积分</small><strong id="score-value">000000</strong><span id="combo-value">× 1.0</span></div><canvas id="radar" width="150" height="150" aria-label="战术雷达"></canvas></div>
+        <div class="wave-info"><small><span id="mode-label">核心行动</span><em id="difficulty-label">标准</em></small><div>WAVE <strong id="wave-value">01</strong><span id="wave-total">/ 10</span></div><b id="gauntlet-timer" class="gauntlet-timer"></b><p><i></i><span id="enemy-count">0 个敌对信号</span><i></i></p></div>
+        <div class="hud-top-right"><div class="score-box"><small>作战积分</small><strong id="score-value">000000</strong><span id="combo-value">× 1.0</span><em id="credits-value">0 CR</em></div><canvas id="radar" width="150" height="150" aria-label="战术雷达"></canvas></div>
         <div id="boss-hud" class="boss-hud"><div><span>守望者 // WARDEN</span><b>首领单位</b></div><div class="boss-bar"><i id="boss-fill"></i></div></div>
-        <div id="objective" class="objective"><small>当前目标</small><strong>清除区域内敌人</strong><span>保持移动，注意侧翼</span></div>
+        <div id="objective" class="objective"><small id="objective-label">当前目标</small><strong id="objective-title">清除区域内敌人</strong><span id="objective-sub">保持移动，注意侧翼</span></div>
         <div id="kill-feed" class="kill-feed"></div>
         <div id="announcer" class="announcer"><small></small><strong></strong><p></p></div>
-        <div id="crosshair" class="crosshair"><i></i><i></i><i></i><i></i><b></b><span id="hitmarker"></span></div>
+        <div id="crosshair" class="crosshair"><i></i><i></i><i></i><i></i><b></b><span id="red-dot"></span><span id="hitmarker"></span></div>
         <div class="hud-bottom-left"><div class="ability" id="ability-dash"><kbd>Q</kbd><div><strong>相位冲刺</strong><span><i></i></span></div><b class="ability-status">就绪</b></div><div class="ability" id="ability-pulse"><kbd>E</kbd><div><strong>电磁脉冲</strong><span><i></i></span></div><b class="ability-status">就绪</b></div></div>
         <div class="energy-block" id="energy-block">
           <div class="energy-head"><span><kbd>F</kbd> 核心超载</span><b id="overdrive-status">充能 0%</b></div>
@@ -131,7 +144,7 @@
         <div id="lock-reticle" class="lock-reticle"><i></i><i></i><i></i><i></i><b></b></div>
 
         <div id="mobile-controls" class="mobile-controls">
-          <div id="move-stick" class="touch-stick"><i></i><span>移动</span></div>
+          <div id="move-stick" class="touch-stick" aria-label="虚拟移动摇杆"><b class="stick-arrow up">▲</b><b class="stick-arrow down">▼</b><b class="stick-arrow left">◀</b><b class="stick-arrow right">▶</b><i></i><span class="stick-label">移动 / MOVE</span></div>
           <div id="look-zone" class="look-zone"></div>
           <button id="mobile-fire" class="mobile-fire" aria-label="开火"><i></i><span>FIRE</span></button>
           <div class="board-action-row">
@@ -140,6 +153,8 @@
             <button id="mobile-pulse" class="mobile-small pulse" aria-label="脉冲">E</button>
             <button id="mobile-switch" class="mobile-small switch" aria-label="切换武器">⇄</button>
             <button id="mobile-overdrive" class="mobile-small overdrive" aria-label="核心超载">F</button>
+            <button id="mobile-jump" class="mobile-small jump" aria-label="跳跃">↑</button>
+            <button id="mobile-slide" class="mobile-small slide" aria-label="滑铲">⤵</button>
             <button id="mobile-aim" class="mobile-small aim board-only" aria-label="精确瞄准">◎</button>
             <button id="mobile-demo" class="mobile-small demo board-only" aria-label="课堂演示">AUTO</button>
           </div>
@@ -152,14 +167,14 @@
           <h2>作弊码清单<span>.</span></h2>
           <p class="modal-lead">单机训练用外挂。游戏中直接敲字母触发（大小写均可），或按 <kbd>`</kbd> / ↑↑↓↓←→←→BA 打开本清单。</p>
           <div class="cheat-list">
-            <div class="cheat-row"><kbd>LOCKON</kbd><span>锁头 // 视线自动吸附敌人头部弱点</span></div>
-            <div class="cheat-row"><kbd>AUTOFIRE</kbd><span>自动射击 // 锁定目标后持续开火</span></div>
+            <div class="cheat-row"><kbd>LOCKON</kbd><span>锁头 // 按距离近→远选靶，统一瞄头线，跳过墙后目标</span></div>
+            <div class="cheat-row"><kbd>AUTOFIRE</kbd><span>自动射击 // 锁定目标后持续开火（含半自动武器）</span></div>
             <div class="cheat-row"><kbd>GODMODE</kbd><span>无敌 // 免疫一切伤害</span></div>
             <div class="cheat-row"><kbd>INFINITY</kbd><span>无限弹药 // 不消耗、不换弹</span></div>
-            <div class="cheat-row"><kbd>XRAY</kbd><span>透视 // 全敌人血条常显、相位敌人现形</span></div>
+            <div class="cheat-row"><kbd>XRAY</kbd><span>透视 // 仅开启时敌人才穿墙显示，关闭即恢复遮挡</span></div>
             <div class="cheat-row"><kbd>TIMESLIP</kbd><span>子弹时间 // 敌人弹体减速 60%</span></div>
             <div class="cheat-row"><kbd>PURGE</kbd><span>清场 // 秒杀当前全部敌人</span></div>
-            <div class="cheat-row"><kbd>ARSENAL</kbd><span>军械 // 解锁全部 6 把武器</span></div>
+            <div class="cheat-row"><kbd>ARSENAL</kbd><span>军械 // 解锁全部 15 把武器</span></div>
             <div class="cheat-row"><kbd>RECHARGE</kbd><span>回满 // 生命/护盾/能量/弹药全满</span></div>
             <div class="cheat-row"><kbd>OVERBOUND</kbd><span>协议全开 // 一键开启以上全部外挂</span></div>
             <div class="cheat-row"><kbd>STANDDOWN</kbd><span>解除 // 关闭全部外挂</span></div>
@@ -175,7 +190,19 @@
       </section>
 
       <section id="upgrade-screen" class="screen overlay-screen">
-        <div class="upgrade-wrap"><div class="eyebrow">COMBAT ADAPTATION / AVAILABLE</div><h2>选择战术强化<span>.</span></h2><p>波次清除。选择一项模块，强化本次行动。</p><div id="upgrade-options" class="upgrade-options"></div><small class="upgrade-hint">按数字键 1—3 快速选择</small></div>
+        <div class="upgrade-wrap"><div class="eyebrow">COMBAT ADAPTATION / AVAILABLE</div><h2>战后补给站<span>.</span></h2><p>波次清除。先选购装备，再选择一项肉鸽强化继续推进。</p>
+          <div class="shop-head"><span>NX 补给网络 // 货架</span><b id="shop-credits">0 CR</b></div>
+          <div id="shop-panel" class="shop-panel"></div>
+          <div class="upgrade-subhead">战术模块 · 三选一</div>
+          <div id="upgrade-options" class="upgrade-options"></div><small class="upgrade-hint">按数字键 1—3 快速选择强化并进入下一波</small>
+        </div>
+      </section>
+
+      <section id="shop-screen" class="screen overlay-screen">
+        <div class="overlay-card shop-card"><div class="eyebrow">FIELD VENDOR // FLOW SUPPLY</div><h2>战场商人<span>.</span></h2><p class="modal-lead">流动补给站。信用点可购买武器与补给，交易完成后返回战场。</p>
+          <div class="shop-head"><span>当前信用点</span><b id="field-shop-credits">0 CR</b></div><div id="shop-options" class="shop-panel"></div>
+          <button id="shop-close" class="primary-button"><span>返回战场</span><b>G</b><i>↗</i></button>
+        </div>
       </section>
 
       <section id="end-screen" class="screen overlay-screen">

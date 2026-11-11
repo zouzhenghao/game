@@ -64,7 +64,9 @@ export function buildWorld(game) {
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   world.add(floor);
-  game.worldColliders.push(floor);
+  // 墙体规则：地面是视觉面，不参与射线遮挡。
+  // 若把它塞进 worldColliders，向下瞄准时射线会先撞地面，导致「子弹被地板挡住」。
+  game.groundMesh = floor;
   const grid = new THREE.GridHelper(150, 75, 0x2fa08c, 0x16302d);
   grid.material.transparent = true;
   grid.material.opacity = 0.17;
@@ -219,7 +221,8 @@ export function buildWorld(game) {
     group.position.set(x, 0, z);
     world.add(group);
     game.obstacles.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
-    game.worldColliders.push(mesh);
+    // 顶盖比箱体略宽，一并纳入遮挡：否则子弹会从「看得见的盖板」边缘穿过去。
+    game.worldColliders.push(mesh, lid);
   });
 
   // —— 可破坏油桶：被击中会爆炸并连锁引爆邻近油桶 ——

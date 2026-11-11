@@ -147,6 +147,46 @@ html[data-device="board"] .touch-stick>i{
   border:2px solid #54f7d288;background:#54f7d233;
 }
 html[data-device="board"] .touch-stick>span{font-size:12px;bottom:-25px;letter-spacing:3px}
+
+/* ---- 白板虚拟摇杆：显式定位 + 高对比常显引导 ----
+   根因：基础样式把 position:absolute 写在 @media(pointer:coarse) 里，
+   而希沃一体机常上报 pointer:fine（外接鼠标 / 远程桌面），导致摇杆掉进
+   文档流、尺寸与边框失效，玩家「找不到摇杆」。这里在 board 档显式补齐。 */
+html[data-device="board"] .touch-stick,
+html[data-device="board"] .look-zone,
+html[data-device="board"] .mobile-fire{position:absolute;display:block}
+html[data-device="board"] .touch-stick{
+  border-radius:50%;z-index:6;
+  border:3px solid #54f7d2aa;
+  background:radial-gradient(circle,#07130fe8 0%,#07130fa6 68%,#07130f55 100%);
+  animation:boardStickGlow 2.6s ease-in-out infinite;
+}
+@keyframes boardStickGlow{
+  0%,100%{box-shadow:0 0 0 6px #54f7d21a,0 0 26px #54f7d226,inset 0 0 24px #54f7d219}
+  50%{box-shadow:0 0 0 10px #54f7d229,0 0 48px #54f7d24d,inset 0 0 30px #54f7d22e}
+}
+html[data-device="board"] .touch-stick.engaged{
+  border-color:#ffd45c;animation:none;
+  box-shadow:0 0 0 8px #ffd45c2b,0 0 46px #ffd45c66,inset 0 0 28px #ffd45c26;
+}
+html[data-device="board"] .touch-stick>i{z-index:3;display:grid;place-items:center}
+html[data-device="board"] .touch-stick>i:after{content:'✛';font-size:clamp(20px,1.8vw,30px);color:#54f7d2cc;line-height:1}
+html[data-device="board"] .stick-arrow{
+  position:absolute;z-index:2;pointer-events:none;
+  font-family:'Share Tech Mono',monospace;font-size:clamp(13px,1.05vw,19px);color:#54f7d28c;
+}
+html[data-device="board"] .stick-arrow.up{top:5%;left:50%;transform:translateX(-50%)}
+html[data-device="board"] .stick-arrow.down{bottom:5%;left:50%;transform:translateX(-50%)}
+html[data-device="board"] .stick-arrow.left{left:6%;top:50%;transform:translateY(-50%)}
+html[data-device="board"] .stick-arrow.right{right:6%;top:50%;transform:translateY(-50%)}
+html[data-device="board"] .touch-stick .stick-label{
+  position:absolute;left:50%;bottom:-46px;transform:translateX(-50%);
+  width:max-content;white-space:nowrap;
+  font-family:'Share Tech Mono',monospace;font-size:clamp(13px,1.05vw,18px);letter-spacing:3px;
+  color:var(--cyan);background:#07130ff2;border:1px solid #54f7d277;padding:6px 16px;
+}
+html[data-device="board"] .look-zone{z-index:1}
+html[data-device="board"] .mobile-fire{z-index:6}
 html[data-device="board"] .mobile-fire{
   right:4vw;bottom:22vh;
   width:clamp(140px,13vh,200px);height:clamp(140px,13vh,200px);

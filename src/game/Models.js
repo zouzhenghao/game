@@ -91,6 +91,16 @@ const GUN_PALETTE = [
   { metal: 0x243d43, dark: 0x081215, accent: 0x76b9c0, glow: 0x7de8ff },
   { metal: 0x3a2c20, dark: 0x140d08, accent: 0xb98a52, glow: 0xff7a3d },
   { metal: 0x243844, dark: 0x081318, accent: 0x7fbfd6, glow: 0x8fe8ff },
+  // V1.0 新增：手枪 3 / 步枪 3 / 狙击 3，各自独立配色
+  { metal: 0x303a3c, dark: 0x0d1416, accent: 0x8aa6a0, glow: 0xffd45c },
+  { metal: 0x3a2c3c, dark: 0x140d14, accent: 0xa878a8, glow: 0xff7ad2 },
+  { metal: 0x2a2a30, dark: 0x0c0c10, accent: 0x9a9aa8, glow: 0xe6e6ff },
+  { metal: 0x2d4438, dark: 0x0c1610, accent: 0x7fae86, glow: 0x7dff9c },
+  { metal: 0x443c22, dark: 0x16130a, accent: 0xb0a052, glow: 0xffe14d },
+  { metal: 0x402b2b, dark: 0x160c0c, accent: 0xb07070, glow: 0xff6b5a },
+  { metal: 0x263440, dark: 0x08121a, accent: 0x6e94b8, glow: 0x9fd8ff },
+  { metal: 0x2c2f4a, dark: 0x0a0c1a, accent: 0x8a90c8, glow: 0xb0a8ff },
+  { metal: 0x4a3420, dark: 0x1a1008, accent: 0xd0a45c, glow: 0xffc24d },
 ];
 
 function gunMaterials(index) {
@@ -143,11 +153,14 @@ function commonFurniture(b, index) {
  * 返回 { group, magazine, bolt, flash, coils, muzzleZ }
  */
 export function createWeaponModel(index) {
+  // 新增 9 把复用 3 类新外形；配色仍按原始 index 取，保证每把枪外观可辨。
+  const VISUAL = [0, 1, 2, 3, 4, 5, 6, 6, 6, 9, 9, 9, 12, 12, 12];
+  const visual = VISUAL[index] ?? 0;
   const materials = gunMaterials(index);
   const b = new GeoBatch();
   const add = (key, geo, pos, rot, scale) => b.add(key, geo, pos, rot, scale);
 
-  if (index === 0) {
+  if (visual === 0) {
     // VX-9 脉冲步枪：斜切机匣 + 全息镜 + 散热护木 + 能量管线
     add('metal', box(0.19, 0.185, 0.62), [0, 0, -0.1]);
     add('metal', box(0.155, 0.055, 0.54), [0, 0.113, -0.1]);
@@ -176,7 +189,7 @@ export function createWeaponModel(index) {
     // 战术灯与侧导轨
     add('dark', cyl(0.032, 0.032, 0.12, 8), [0.12, -0.045, -0.42], [Math.PI / 2, 0, 0]);
     add('glass', cyl(0.028, 0.028, 0.006, 8), [0.12, -0.045, -0.485], [Math.PI / 2, 0, 0]);
-  } else if (index === 1) {
+  } else if (visual === 1) {
     // SG-12 裂解：双管 + 泵动护木 + 弹仓管 + 环形准星
     add('metal', box(0.23, 0.205, 0.66), [0, 0, -0.08]);
     add('accent', box(0.24, 0.045, 0.4), [0, 0.12, -0.16]);
@@ -195,7 +208,7 @@ export function createWeaponModel(index) {
     add('glow', box(0.01, 0.03, 0.01), [0, 0.16, -0.86]);
     add('dark', box(0.1, 0.045, 0.16), [0, 0.13, 0.02]);
     add('accent', box(0.036, 0.012, 0.2), [0, 0.14, -0.3]);
-  } else if (index === 2) {
+  } else if (visual === 2) {
     // R-01 磁轨：双磁轨 + 线圈 + 大型瞄准镜 + 电容组
     add('metal', box(0.18, 0.2, 0.9), [0, 0, -0.2]);
     add('accent', box(0.19, 0.045, 0.8), [0, 0.12, -0.22]);
@@ -220,7 +233,7 @@ export function createWeaponModel(index) {
     add('metal', box(0.045, 0.06, 0.055), [0, 0.15, -0.28]);
     add('metal', box(0.045, 0.06, 0.055), [0, 0.15, -0.02]);
     add('glow', box(0.02, 0.012, 0.02), [0, 0.255, 0.0]);
-  } else if (index === 3) {
+  } else if (visual === 3) {
     // ARC-7 弧光：特斯拉线圈 + 电容翼 + 悬浮晶体
     add('metal', box(0.205, 0.2, 0.62), [0, 0, -0.12]);
     add('accent', box(0.215, 0.045, 0.5), [0, 0.12, -0.14]);
@@ -243,7 +256,7 @@ export function createWeaponModel(index) {
     add('glow', torus(0.065, 0.006, 4, 16), [0, 0.175, -0.18]);
     add('metal', box(0.05, 0.075, 0.05), [0, 0.115, -0.18]);
     add('glow', box(0.014, 0.014, 0.014), [0, 0.175, -0.18]);
-  } else if (index === 4) {
+  } else if (visual === 4) {
     // WN-5 蜂巢：六管制导发射器 + 瞄准镜 + 下挂握把
     add('metal', box(0.24, 0.26, 0.52), [0, 0, -0.1]);
     add('dark', box(0.28, 0.32, 0.34), [0, -0.04, 0.06]);
@@ -266,6 +279,40 @@ export function createWeaponModel(index) {
     add('dark', box(0.1, 0.22, 0.12), [0, -0.24, 0.08]);
     add('accent', box(0.15, 0.02, 0.2), [0, -0.12, -0.02]);
     for (let i = 0; i < 3; i++) add('dark', box(0.012, 0.18, 0.04), [-0.12 + i * 0.12, -0.02, -0.28]);
+  } else if (visual === 6) {
+    // V1.0 手枪：短套筒 + 大倾角握把 + 短导轨，整体明显更紧凑
+    add('metal', box(0.135, 0.14, 0.36), [0, 0.015, -0.1]);
+    add('dark', box(0.12, 0.05, 0.3), [0, 0.1, -0.12]);
+    add('accent', box(0.1, 0.045, 0.26), [0, 0.1, -0.12]);
+    add('dark', cyl(0.032, 0.032, 0.12, 10), [0, 0, -0.32], [Math.PI / 2, 0, 0]);
+    add('glow', cyl(0.024, 0.024, 0.02, 10), [0, 0, -0.38], [Math.PI / 2, 0, 0]);
+    add('metal', box(0.105, 0.24, 0.12), [0, -0.18, 0.06], [-0.22, 0, 0]);
+    add('dark', box(0.11, 0.03, 0.13), [0, -0.3, 0.075]);
+    for (let i = 0; i < 4; i++) add('dark', box(0.075, 0.016, 0.022), [0, 0.1, -0.22 + i * 0.055]);
+    add('accent', box(0.02, 0.06, 0.02), [0.075, 0.06, 0.04]);
+    add('glow', box(0.03, 0.012, 0.012), [0, 0.075, -0.2]);
+  } else if (visual === 9) {
+    // V1.0 模块化步枪：长护木 + 前握把 + 侧挂弹匣 + 散热孔
+    add('metal', box(0.2, 0.19, 0.66), [0, 0, -0.12]);
+    add('accent', box(0.17, 0.05, 0.5), [0, 0.115, -0.14]);
+    add('dark', box(0.17, 0.11, 0.42), [0, -0.02, -0.52]);
+    for (let i = 0; i < 6; i++) add('glow', box(0.012, 0.045, 0.02), [0.088, -0.01, -0.72 + i * 0.075]);
+    add('dark', cyl(0.042, 0.042, 0.52, 10), [0, 0.015, -0.92], [Math.PI / 2, 0, 0]);
+    add('glow', torus(0.05, 0.01, 4, 14), [0, 0.015, -1.16], [Math.PI / 2, 0, 0]);
+    add('dark', box(0.09, 0.2, 0.11), [0, -0.2, -0.4]);
+    add('accent', box(0.14, 0.02, 0.24), [0, -0.1, -0.42]);
+    add('metal', box(0.09, 0.19, 0.12), [0.14, -0.14, 0.02]);
+  } else if (visual === 12) {
+    // V1.0 反器材狙击：超长枪管 + 大型镜筒 + 两脚架 + 制退器
+    add('metal', box(0.17, 0.17, 0.7), [0, 0, -0.08]);
+    add('accent', box(0.19, 0.04, 0.6), [0, 0.1, -0.12]);
+    add('dark', cyl(0.036, 0.042, 1.1, 12), [0, 0.01, -0.95], [Math.PI / 2, 0, 0]);
+    add('glow', cyl(0.062, 0.062, 0.1, 12), [0, 0.01, -1.48], [Math.PI / 2, 0, 0]);
+    for (let i = 0; i < 3; i++) add('dark', box(0.11, 0.012, 0.03), [0, 0.01, -1.28 + i * 0.1]);
+    add('dark', cyl(0.062, 0.062, 0.42, 12), [0, 0.19, -0.3], [Math.PI / 2, 0, 0]);
+    add('glass', cyl(0.055, 0.055, 0.01, 12), [0, 0.19, -0.51], [Math.PI / 2, 0, 0]);
+    add('accent', torus(0.064, 0.011, 5, 16), [0, 0.19, -0.52]);
+    for (const side of [-1, 1]) add('dark', box(0.02, 0.36, 0.02), [side * 0.11, -0.24, -0.86], [0, 0, side * 0.25]);
   } else {
     // LN-3 寒霜：低温步枪 —— 细长枪管 + 冰晶枪口 + 侧置冷凝罐 + 散热鳍
     add('metal', box(0.18, 0.2, 0.5), [0, 0, -0.12]);
@@ -288,7 +335,7 @@ export function createWeaponModel(index) {
     add('glow', box(0.014, 0.014, 0.014), [0, 0.14, -0.18]);
   }
 
-  commonFurniture(b, index);
+  commonFurniture(b, visual);
 
   const group = new THREE.Group();
   const staticGroup = b.build(materials);
@@ -302,8 +349,8 @@ export function createWeaponModel(index) {
   const magGlow = new THREE.Mesh(box(0.012, 0.14, 0.012), materials.glow);
   magGlow.position.set(0.056, 0, 0.06);
   magazine.add(magBody, magLip, magGlow);
-  magazine.position.set(0, -0.19, index === 1 ? -0.16 : -0.03);
-  if (index === 1) magazine.visible = false;
+  magazine.position.set(0, -0.19, visual === 1 ? -0.16 : -0.03);
+  if (visual === 1 || visual === 6) magazine.visible = false;
   group.add(magazine);
 
   const bolt = new THREE.Mesh(box(0.055, 0.04, 0.085), materials.accent);
@@ -315,14 +362,36 @@ export function createWeaponModel(index) {
   flashCore.rotation.x = -Math.PI / 2;
   const flashRing = new THREE.Mesh(torus(0.1, 0.018, 5, 14), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
   flash.add(flashCore, flashRing);
-  const muzzleZ = index === 5 ? -1.14 : index === 4 ? -1.02 : index === 2 ? -1.44 : index === 1 ? -1.14 : index === 3 ? -1.22 : -1.12;
+  const muzzleZ = visual === 12 ? -1.62 : visual === 9 ? -1.24 : visual === 6 ? -0.62
+    : visual === 5 ? -1.14 : visual === 4 ? -1.02 : visual === 2 ? -1.44
+      : visual === 1 ? -1.14 : visual === 3 ? -1.22 : -1.12;
   flash.position.set(0, 0.015, muzzleZ - 0.1);
   flash.visible = false;
   group.add(flash);
 
+  // —— 红点全息瞄准镜：全枪系通用，瞄准过渡时红点与准星重合 ——
+  const optics = new THREE.Group();
+  const opticBase = new THREE.Mesh(box(0.13, 0.05, 0.2), materials.dark);
+  const opticTube = new THREE.Mesh(cyl(0.052, 0.052, 0.17, 12), materials.dark);
+  opticTube.rotation.x = Math.PI / 2;
+  opticTube.position.y = 0.075;
+  const opticRim = new THREE.Mesh(torus(0.052, 0.009, 5, 16), materials.accent);
+  opticRim.position.set(0, 0.075, -0.086);
+  const opticGlass = new THREE.Mesh(cyl(0.046, 0.046, 0.006, 12), new THREE.MeshBasicMaterial({ color: 0x2fd8ff, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+  opticGlass.rotation.x = Math.PI / 2;
+  opticGlass.position.set(0, 0.075, -0.09);
+  const redDot = new THREE.Mesh(sph(0.013, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3350, toneMapped: false }));
+  redDot.position.set(0, 0.075, -0.098);
+  const opticKnob = new THREE.Mesh(cyl(0.026, 0.026, 0.04, 8), materials.accent);
+  opticKnob.position.set(0.088, 0.055, 0.02);
+  opticKnob.rotation.z = Math.PI / 2;
+  optics.add(opticBase, opticTube, opticRim, opticGlass, redDot, opticKnob);
+  optics.position.set(0, 0.15, -0.14);
+  group.add(optics);
+
   // 电弧线圈（仅弧光旋转）
   const coils = new THREE.Group();
-  if (index === 3) {
+  if (visual === 3) {
     for (let i = 0; i < 3; i++) {
       const ring = new THREE.Mesh(torus(0.12 + i * 0.025, 0.01, 5, 18), materials.glow);
       ring.position.set(0, 0.015, -0.55 - i * 0.16);
@@ -333,7 +402,7 @@ export function createWeaponModel(index) {
   }
 
   group.traverse((child) => { child.frustumCulled = false; child.renderOrder = 10; });
-  return { group, magazine, bolt, flash, coils, muzzleZ, materials };
+  return { group, magazine, bolt, flash, coils, muzzleZ, materials, optics, redDot };
 }
 
 /* ------------------------------------------------------------------ *
