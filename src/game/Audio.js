@@ -4,6 +4,7 @@ export class AudioSystem {
     this.context = null;
     this.master = null;
     this.noiseBuffer = null;
+    this.volume = 1; // 0–1，1 = 原始音量（设置面板「主音量 100%」）
   }
 
   init() {
@@ -15,7 +16,7 @@ export class AudioSystem {
     if (!Context) return;
     this.context = new Context();
     this.master = this.context.createGain();
-    this.master.gain.value = 0.28;
+    this.master.gain.value = 0.28 * this.volume;
     this.master.connect(this.context.destination);
     const length = this.context.sampleRate;
     this.noiseBuffer = this.context.createBuffer(1, length, this.context.sampleRate);
@@ -27,6 +28,13 @@ export class AudioSystem {
     this.enabled = !this.enabled;
     if (this.enabled) this.init();
     return this.enabled;
+  }
+
+  /** 设置主音量（0–100），即时生效；音频上下文尚未初始化时延迟到 init 应用。 */
+  setVolume(percent) {
+    const value = Number(percent);
+    this.volume = Number.isFinite(value) ? Math.min(1, Math.max(0, value / 100)) : 1;
+    if (this.master) this.master.gain.value = 0.28 * this.volume;
   }
 
   tone(frequency, duration, volume = 0.15, type = 'sine', endFrequency = frequency, delay = 0) {

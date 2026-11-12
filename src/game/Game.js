@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { AudioSystem } from './Audio.js';
 import { createWeaponModel, buildEnemyModel } from './Models.js';
 import { buildWorld } from './World.js';
+import { settings, assistFactor, feedbackFactor } from '../settings.js';
 
 const clamp = THREE.MathUtils.clamp;
 const lerp = THREE.MathUtils.lerp;
@@ -174,7 +175,12 @@ const BASE_UPGRADES = [
   { id: 'b-pulse', icon: '◎', name: '脉冲核心', desc: '脉冲伤害 +10 / 半径 +1。', apply: (g) => { g.player.pulseDamage += 10; g.player.pulseRadius += 1; } },
   { id: 'b-execute', icon: '⌖', name: '处决协议', desc: '处决加成 +8%。', apply: (g) => { g.player.executeBonus += 0.08; } },
   { id: 'b-pickup', icon: '⊙', name: '拾取场', desc: '拾取范围 +0.2。', apply: (g) => { g.player.pickupRadius += 0.2; } },
-  { id: 'b-aimassist', icon: '⌖', name: '战术辅助瞄具', desc: '开启轻度辅助瞄准：准星柔和吸附最近敌人、子弹命中更稳（仅前方锥形范围）。不瞬锁、不自动开火，公平但顺手。可叠加至 3 级。', apply: (g) => { g.player.aimAssistLevel = Math.min(3, (g.player.aimAssistLevel || 0) + 1); } },
+  { id: 'b-aimassist', icon: '⌖', name: '战术辅助瞄具', desc: '开启轻度辅助瞄准：准星柔和吸附最近敌人、子弹命中更稳（仅前方锥形范围）。不瞬锁、不自动开火，公平但顺手。可叠加至 3 级。', apply: (g) => { g.player.aimAssistLevel = Math.min(3, (g.player.aimAssistLevel || 0) + 1); }, levelOf: (g) => g.player.aimAssistLevel || 0 },
+  { id: 'b-combo', icon: '⛓', name: '连击稳定器', desc: '连击保持时间延长 1.2 秒，更容易滚起高连击倍率。', apply: (g) => { g.player.comboHold = (g.player.comboHold || 0) + 1.2; }, levelOf: (g) => Math.round((g.player.comboHold || 0) / 1.2) },
+  { id: 'b-dash', icon: '↯', name: '相位电容', desc: '相位冲刺冷却缩短 12%。', apply: (g) => { g.player.dashMax *= 0.88; } },
+  { id: 'b-thorns', icon: '✵', name: '反冲装甲', desc: '受击时对周围敌人反弹 18 点伤害。', apply: (g) => { g.player.thorns += 18; }, levelOf: (g) => Math.round((g.player.thorns || 0) / 18) },
+  { id: 'b-weakpoint', icon: '◎', name: '弱点标定', desc: '弱点 / 暴击命中伤害提高 10%。', apply: (g) => { g.player.weakpointBonus = (g.player.weakpointBonus || 0) + 0.1; }, levelOf: (g) => Math.round((g.player.weakpointBonus || 0) * 10) },
+  { id: 'b-score', icon: '◆', name: '战术记录仪', desc: '作战积分获取提高 8%（纯记录加成，不影响战斗强度）。', apply: (g) => { g.player.scoreBonus = (g.player.scoreBonus || 0) + 0.08; }, levelOf: (g) => Math.round((g.player.scoreBonus || 0) / 0.08) },
 ];
 
 /** 货架上的付费武器附件 / 战术模块（稀有度按波次解锁，模仿土豆兄弟分层）。 */
@@ -464,6 +470,7 @@ export class Game {
       skills: [], skillDmg: 1, skillFire: 1, skillBuff: 0, critProtocol: false, adaptiveArmor: false,
       siphon: false, nanite: 0, adrenaline: false, thorns: 0, medTime: 0, medRate: 0,
       aimAssistLevel: 0,  // 平衡版辅助瞄准等级（波次三选一「战术辅助瞄具」累加，最高 3）
+      comboHold: 0, weakpointBonus: 0, scoreBonus: 0, // 1.1.0 新增三选一强化属性
     };
     this.weaponState = WEAPONS.map((weapon) => ({ ammo: weapon.magazine, reserve: weapon.reserve }));
     this.loadout = [0];          // 已持有的武器（WEAPONS 绝对索引），最多 6 把对应 HUD 槽 1–6
@@ -621,6 +628,8 @@ export class Game {
   bindEvents() {
     window.addEventListener('resize', () => this.resize());
     document.addEventListener('keydown', (event) => {
+      // 资料/设置弹窗打开时屏蔽全部游戏输入：避免拖滑块、打字时误触发技能、暂停或作弊密语。
+      if (document.getElementById('modal-backdrop')?.classList.contains('active')) return;
       this.keys[event.code] = true;
       if (event.code === 'KeyR') this.reload();
       if (event.code === 'KeyQ') this.dash();
@@ -643,8 +652,10 @@ export class Game {
     document.addEventListener('keyup', (event) => { this.keys[event.code] = false; });
     document.addEventListener('mousemove', (event) => {
       if (this.state !== 'playing' || (!this.isTouch && document.pointerLockElement !== this.canvas)) return;
-      this.yaw -= event.movementX * 0.0021;
-      this.pitch = clamp(this.pitch - event.movementY * 0.0019, -1.45, 1.45);
+      const s = settings.mouseSensitivity;
+      const dirY = settings.invertY ? -1 : 1;
+      this.yaw -= event.movementX * 0.0021 * s;
+      this.pitch = clamp(this.pitch - event.movementY * 0.0019 * s * dirY, -1.45, 1.45);
     });
     this.canvas.addEventListener('mousedown', (event) => {
       if (this.state !== 'playing') return;
@@ -675,6 +686,10 @@ export class Game {
   }
 
   bindTouchControls() {
+    // 部分白板红外触控 / 老浏览器不支持或拒绝 setPointerCapture，失败时降级为普通事件流
+    const capture = (element, pointerId) => {
+      try { element.setPointerCapture?.(pointerId); } catch (_) { /* 降级 */ }
+    };
     const stick = document.getElementById('move-stick');
     const knob = stick.querySelector('i');
     let stickPointer = null;
@@ -690,12 +705,14 @@ export class Game {
     };
     stick.addEventListener('pointerdown', (event) => {
       event.preventDefault();
-      stick.setPointerCapture?.(event.pointerId);
+      capture(stick, event.pointerId);
       stickPointer = event.pointerId;
       stick.classList.add('engaged');
       updateStick(event);
     }, { passive: false });
-    stick.addEventListener('pointermove', (event) => {
+    // 在 document 上按 pointerId 追踪：即使白板拒绝 setPointerCapture，手指滑出
+    // 摇杆范围或在别处抬起，也不会丢失移动 / 卡住摇杆。
+    document.addEventListener('pointermove', (event) => {
       if (event.pointerId !== stickPointer) return;
       event.preventDefault();
       updateStick(event);
@@ -707,39 +724,77 @@ export class Game {
       knob.style.transform = '';
       stick.classList.remove('engaged');
     };
-    stick.addEventListener('pointerup', endStick);
-    stick.addEventListener('pointercancel', endStick);
+    document.addEventListener('pointerup', endStick);
+    document.addEventListener('pointercancel', endStick);
 
     // 白板支持多点触控：视角滑动可与移动摇杆、开火、技能同时使用。
     const look = document.getElementById('look-zone');
     const lookPointers = new Map();
     look.addEventListener('pointerdown', (event) => {
       event.preventDefault();
-      look.setPointerCapture?.(event.pointerId);
+      capture(look, event.pointerId);
       lookPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     }, { passive: false });
-    look.addEventListener('pointermove', (event) => {
+    const lookSensitivity = () => ({
+      yaw: (this.isBoard ? 0.0026 : 0.0042) * settings.touchSensitivity,
+      pitch: (this.isBoard ? 0.0024 : 0.0037) * settings.touchSensitivity,
+      dirY: settings.invertY ? -1 : 1,
+    });
+    const applyLookDelta = (dx, dy, scale = 1) => {
+      const s = lookSensitivity();
+      this.yaw -= dx * s.yaw * scale;
+      this.pitch = clamp(this.pitch - dy * s.pitch * scale * s.dirY, -1.4, 1.4);
+    };
+    document.addEventListener('pointermove', (event) => {
       const last = lookPointers.get(event.pointerId);
       if (!last || this.state !== 'playing') return;
       event.preventDefault();
-      this.yaw -= (event.clientX - last.x) * (this.isBoard ? 0.0026 : 0.0042);
-      this.pitch = clamp(this.pitch - (event.clientY - last.y) * (this.isBoard ? 0.0024 : 0.0037), -1.4, 1.4);
+      applyLookDelta(event.clientX - last.x, event.clientY - last.y);
       lookPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     }, { passive: false });
     const endLook = (event) => lookPointers.delete(event.pointerId);
-    look.addEventListener('pointerup', endLook);
-    look.addEventListener('pointercancel', endLook);
+    document.addEventListener('pointerup', endLook);
+    document.addEventListener('pointercancel', endLook);
 
+    /**
+     * 1.1.0 触屏操作升级：按住 FIRE 时同一根手指滑动也能转视角（主流 FPS 手游手感）。
+     * 全部在 document 上按 pointerId 追踪：不依赖 setPointerCapture，手指滑出按钮
+     * 仍能继续转向、在别处抬起也能正确停火；多指并存（移动摇杆 / 右侧滑屏）互不干扰。
+     */
     const fire = document.getElementById('mobile-fire');
+    const firePointers = new Map();
     fire.addEventListener('pointerdown', (event) => {
       event.preventDefault();
-      fire.setPointerCapture?.(event.pointerId);
+      capture(fire, event.pointerId);
+      firePointers.set(event.pointerId, { x: event.clientX, y: event.clientY, moved: 0 });
       this.firing = true;
       this.shotThisHold = false;
+      fire.classList.add('firing');
     }, { passive: false });
-    const stopFire = (event) => { event.preventDefault(); this.firing = false; this.shotThisHold = false; };
-    fire.addEventListener('pointerup', stopFire);
-    fire.addEventListener('pointercancel', stopFire);
+    document.addEventListener('pointermove', (event) => {
+      const last = firePointers.get(event.pointerId);
+      if (!last || !settings.fireLook || this.state !== 'playing') return;
+      event.preventDefault();
+      const dx = event.clientX - last.x;
+      const dy = event.clientY - last.y;
+      // 抖动死区：位移先累积，超过阈值才应用，既不丢慢速滑动、也不会因手指微颤抖视角
+      last.moved += Math.abs(dx) + Math.abs(dy);
+      if (last.moved < 1.2) return;
+      applyLookDelta(dx, dy, settings.fireLookSensitivity);
+      firePointers.set(event.pointerId, { x: event.clientX, y: event.clientY, moved: 0 });
+    }, { passive: false });
+    const stopFire = (event) => {
+      if (!firePointers.has(event.pointerId)) return; // 不是开火指针，别干扰其它按钮
+      event.preventDefault();
+      firePointers.delete(event.pointerId);
+      if (firePointers.size === 0) {
+        this.firing = false;
+        this.shotThisHold = false;
+        fire.classList.remove('firing');
+      }
+    };
+    document.addEventListener('pointerup', stopFire);
+    document.addEventListener('pointercancel', stopFire);
 
     const bindButton = (id, action) => {
       const element = document.getElementById(id);
@@ -1318,8 +1373,9 @@ export class Game {
     this.camera.position.set(player.position.x, eyeHeight + bob, player.position.z);
     if (this.shake > 0) {
       this.shake = Math.max(0, this.shake - dt * 2.5);
-      this.camera.position.x += random(-1, 1) * this.shake * 0.08;
-      this.camera.position.y += random(-1, 1) * this.shake * 0.08;
+      const amp = 0.08 * feedbackFactor();
+      this.camera.position.x += random(-1, 1) * this.shake * amp;
+      this.camera.position.y += random(-1, 1) * this.shake * amp;
     }
     this.updateAimAssist(dt); // 平衡版辅助瞄准：仅在持有「战术辅助瞄具」且非作弊/演示时，极轻柔吸附视角
     this.camera.rotation.set(this.pitch, this.yaw, 0);
@@ -1536,11 +1592,12 @@ export class Game {
    */
   updateAimAssist(dt) {
     const L = this.player.aimAssistLevel;
-    if (!L || this.cheats.lock || this.cheats.auto || this.demoMode) return;
+    const factor = assistFactor();
+    if (!L || factor <= 0 || this.cheats.lock || this.cheats.auto || this.demoMode) return;
     const origin = this.camera.getWorldPosition(new THREE.Vector3());
     const dir = this.camera.getWorldDirection(new THREE.Vector3());
-    const cone = THREE.MathUtils.degToRad(10 + 3 * (L - 1)); // 仅前方 10–16° 锥形内生效
-    const maxRange = 34 + 6 * (L - 1);
+    const cone = THREE.MathUtils.degToRad(10 + 3 * (L - 1)) * factor; // 仅前方小锥形内生效
+    const maxRange = (34 + 6 * (L - 1)) * (0.5 + factor * 0.5);
     let best = null, bestAng = Infinity;
     const aim = new THREE.Vector3();
     for (const enemy of this.enemies) {
@@ -1829,7 +1886,7 @@ export class Game {
           const critical = hit.object.userData.critical;
           let critRoll = Math.random() < player.critChance + (weapon.critBonus || 0);
           if (player.critProtocol && this.shotsFired > 0 && this.shotsFired % 7 === 0) critRoll = true;
-          const amount = weapon.damage * player.damageMultiplier * (overdrive ? 1.5 : 1) * player.skillDmg * (critical ? 1.65 : 1) * (critRoll ? player.critMultiplier : 1);
+          const amount = weapon.damage * player.damageMultiplier * (overdrive ? 1.5 : 1) * player.skillDmg * (critical ? 1.65 * (1 + (player.weakpointBonus || 0)) : 1) * (critRoll ? player.critMultiplier : 1);
           if (this.mission?.id === 'headshot' && hit.object.userData.critical) this.addMissionProgress();
           const killed = this.damageEnemy(enemy, amount, direction, { critical: Boolean(critical || critRoll), critRoll });
           if (weapon.chain) this.chainLightning(enemy, hit.point, amount, weapon.chain + player.chainBonus, new Set(uniqueEnemies));
@@ -1992,10 +2049,13 @@ export class Game {
 
   getAimAssist(origin, direction, level = 0) {
     // 触屏基线已自带辅助瞄准；等级（战术辅助瞄具 perk）在其上小幅放宽锥形与射程，保持公平。
+    // 设置面板的「辅助瞄准强度」作为全局倍率：0% = 关闭，100% = 标准，150% = 增强。
+    const factor = assistFactor();
+    if (factor <= 0) return null;
     const baseCone = this.isBoard ? 0.13 : 0.08;
-    const cone = baseCone + level * 0.02;            // 每级约 +1.1° 锥形半角
+    const cone = (baseCone + level * 0.02) * factor; // 每级约 +1.1° 锥形半角
     const baseRange = this.isBoard ? 46 : 32;
-    const maxRange = baseRange + level * 6;          // 每级 +6m 作用距离
+    const maxRange = (baseRange + level * 6) * (0.5 + factor * 0.5); // 射程随强度温和变化
     let best = null;
     let bestAngle = cone;
     for (const enemy of this.enemies) {
@@ -2025,7 +2085,12 @@ export class Game {
     enemy.health -= final;
     // 绝区零式反馈：连续命中数、短暂顿帧、暴击震屏（保留手感，移除破防系统）
     this.hitCombo = (this.hitCombo || 0) + 1;
-    this.hitComboTimer = 3.2;
+    this.hitComboTimer = 3.2 + (this.player.comboHold || 0);
+    // 1.1.0 连击里程碑：给出明确的正反馈，让持续命中更有目标感（不影响伤害数值）
+    if ([10, 25, 50, 100].includes(this.hitCombo)) {
+      this.callbacks.onAnnounce?.(`${this.hitCombo} 连击`, '火力链条稳定 · 保持压制', 'COMBO CHAIN', 1500);
+      this.audio.achievement();
+    }
     this.hitStop = Math.max(this.hitStop || 0, meta.critical ? 0.05 : 0.022);
     this.shake = Math.min(1.2, this.shake + (meta.critical ? 0.2 : 0.07));
     enemy.hitTimer = 0.07;
@@ -2064,7 +2129,7 @@ export class Game {
     this.enemyHitMeshes = this.enemyHitMeshes.filter((mesh) => mesh.userData.enemy !== enemy);
     this.kills += 1;
     this.combo = Math.min(4, this.combo + (enemy.type === 'boss' ? 1 : 0.2));
-    this.comboTimer = 4;
+    this.comboTimer = 4 + (this.player.comboHold || 0);
     this.comboPeak = Math.max(this.comboPeak, this.combo);
     this.addEnergy(6);
     this.unlockAchievement('first-blood');
@@ -2073,7 +2138,7 @@ export class Game {
     if (enemy.type === 'medic') this.unlockAchievement('medic-down');
     if (enemy.type === 'falcon') { this.falconKills = (this.falconKills || 0) + 1; if (this.falconKills >= 8) this.unlockAchievement('falconer'); }
     if (enemy.slow > 0) { this.frostKills = (this.frostKills || 0) + 1; if (this.frostKills >= 15) this.unlockAchievement('frostbite'); }
-    const gained = Math.floor(enemy.score * this.combo);
+    const gained = Math.floor(enemy.score * this.combo * (1 + (this.player.scoreBonus || 0)));
     this.score += gained;
     this.credits += Math.round(enemy.score * 0.12);
     if (this.mode === 'gauntlet') this.waveTimeLeft = Math.min(90, this.waveTimeLeft + 2.5);

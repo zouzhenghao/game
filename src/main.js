@@ -1,6 +1,7 @@
 import './style.css';
 import './board.css';
 import { Game, ACHIEVEMENTS, detectProfile, WEAPONS, WEAPON_CATEGORY_LABEL, DIFFICULTY } from './game/Game.js';
+import { settings, setSetting, resetSettings, SETTINGS_DEFAULTS } from './settings.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -27,7 +28,7 @@ let lastDamageNumber = 0;
 const modalTemplates = {
   briefing: `
     <div class="eyebrow">OPERATION / NEON ASHES</div><h2 id="modal-title">作战简报<span>.</span></h2>
-    <p class="modal-lead">02:17，第七区战术网络遭到不明机械军团入侵。你是最后一名仍可链接的「幽灵」作战员。以下为 1.0 正式版的完整作战流程。</p>
+    <p class="modal-lead">02:17，第七区战术网络遭到不明机械军团入侵。你是最后一名仍可链接的「幽灵」作战员。以下为 1.1.0 正式版的完整作战流程。</p>
     <div class="briefing-grid"><div><b>01</b><strong>自定装备</strong><p>开局从手枪 / 步枪 / 狙击三选一，武器库共 15 把，按 1–6 切换已持有武器。</p></div><div><b>02</b><strong>战后补给</strong><p>首波结束即开放补给站：用信用点购买武器与补给，再从肉鸽模块中三选一强化。</p></div><div><b>03</b><strong>战术任务</strong><p>每波随机任务与章节剧情推进；第 3 / 6 / 9 波出现流动商人，靠近按 G 交易。</p></div><div><b>04</b><strong>摧毁核心</strong><p>难度决定通关波数（10 / 15 / 20 / 25 波），最终波迎战守望者；通关后解锁极限难度与战场事件。</p></div></div>
     <div class="intel-row v2"><span>红色敌人擅长突袭</span><span>紫色敌人远程攻击</span><span>橙色重装移动缓慢</span><span>青色幽影会相位隐形</span><span>黄色蜂群贴近后自毁</span><span>绿色单元会修复友军</span><span>琥珀炮台定点轰炸</span><span>青柠游隼高速俯冲</span><span>油桶可被引爆</span></div>`,
   armory: `
@@ -35,7 +36,8 @@ const modalTemplates = {
     <div class="armory-list"><article><div class="weapon-silhouette rifle">VX-9</div><div><small>01 / 初始装备</small><h3>VX-9 脉冲</h3><p>稳定的全自动脉冲步枪，适合中距离持续压制。</p><span>伤害 24　·　射速 9/s　·　弹匣 30</span></div></article><article><div class="weapon-silhouette shotgun">SG-12</div><div><small>02 / 第 2 波解锁</small><h3>SG-12 裂解</h3><p>八枚高能弹丸同时释放，近距离可造成毁灭性伤害。</p><span>伤害 14×8　·　射速 1.2/s　·　弹匣 6</span></div></article><article><div class="weapon-silhouette rail">R-01</div><div><small>03 / 第 4 波解锁</small><h3>R-01 磁轨</h3><p>高精度磁轨射线，贯穿一条直线上的所有敌人。</p><span>伤害 135　·　射速 0.8/s　·　弹匣 5</span></div></article><article class="v2"><div class="weapon-silhouette rail">ARC-7</div><div><small>04 / 第 6 波解锁</small><h3>ARC-7 弧光</h3><p>发射链式电弧，命中后自动跳跃到附近敌人，最多连锁 3 个目标。</p><span>伤害 46　·　射速 3.4/s　·　弹匣 24</span></div></article><article class="v2"><div class="weapon-silhouette rocket">WN-5</div><div><small>05 / 第 8 波解锁</small><h3>WN-5 蜂巢</h3><p>六管制导发射器，导弹自动锁定最近敌人，命中后产生范围爆炸，可连爆油桶。</p><span>伤害 120　·　射速 1.1/s　·　弹匣 4</span></div></article><article class="v2"><div class="weapon-silhouette frost">LN-3</div><div><small>06 / 第 9 波解锁</small><h3>LN-3 寒霜</h3><p>低温步枪，命中使敌人减速 50%，是控场与切断冲锋的核心手段。</p><span>伤害 30　·　射速 4.2/s　·　弹匣 22</span></div></article></div>`,
   controls: `
     <div class="eyebrow">NEURAL INTERFACE / MANUAL</div><h2 id="modal-title">操作指南<span>.</span></h2>
-    <div class="controls-grid"><div><h3>键鼠操作</h3><p><kbd>W A S D</kbd><span>移动</span></p><p><kbd>鼠标</kbd><span>观察 / 瞄准</span></p><p><kbd>左键 / 右键</kbd><span>射击 / 精确瞄准</span></p><p><kbd>Shift</kbd><span>疾跑（武器下沉）</span></p><p><kbd>Space</kbd><span>跳跃</span></p><p><kbd>Ctrl / C</kbd><span>滑铲</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载（能量满时）</span></p><p><kbd>G</kbd><span>靠近 NPC 商人时交易</span></p><p><kbd>R / 1–6</kbd><span>装填 / 切换已持有武器</span></p><p><kbd>ESC / P</kbd><span>暂停</span></p></div><div><h3>触屏操作</h3><p><kbd>左侧摇杆</kbd><span>移动</span></p><p><kbd>右侧滑动</kbd><span>观察 / 瞄准</span></p><p><kbd>FIRE</kbd><span>按住连续射击</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载</span></p><p><kbd>R / ⇄</kbd><span>装填 / 切换武器</span></p><p><kbd>Ⅱ</kbd><span>暂停</span></p><small>手机端会自动辅助瞄准近距离目标。</small></div></div>
+    <div class="controls-grid"><div><h3>键鼠操作</h3><p><kbd>W A S D</kbd><span>移动</span></p><p><kbd>鼠标</kbd><span>观察 / 瞄准</span></p><p><kbd>左键 / 右键</kbd><span>射击 / 精确瞄准</span></p><p><kbd>Shift</kbd><span>疾跑（武器下沉）</span></p><p><kbd>Space</kbd><span>跳跃</span></p><p><kbd>Ctrl / C</kbd><span>滑铲</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载（能量满时）</span></p><p><kbd>G</kbd><span>靠近 NPC 商人时交易</span></p><p><kbd>R / 1–6</kbd><span>装填 / 切换已持有武器</span></p><p><kbd>ESC / P</kbd><span>暂停</span></p></div><div><h3>触屏操作</h3><p><kbd>左侧摇杆</kbd><span>移动</span></p><p><kbd>右侧滑动</kbd><span>观察 / 瞄准</span></p><p><kbd>FIRE</kbd><span>按住连续射击 · 同指滑动可边打边转向</span></p><p><kbd>Q / E</kbd><span>冲刺 / 电磁脉冲</span></p><p><kbd>F</kbd><span>核心超载</span></p><p><kbd>R / ⇄</kbd><span>装填 / 切换武器</span></p><p><kbd>Ⅱ</kbd><span>暂停</span></p><small>手机端自带轻度辅助瞄准；按住 FIRE 的那根手指直接滑动即可边开火边转向，左摇杆与右滑屏可多指同时操作。</small></div></div>
+    <div class="board-note v110"><h3>1.1.0 正式版 · 操作与设置</h3><p>首页右上角齿轮或暂停界面「系统设置」可调整 <strong>键鼠 / 触屏灵敏度、按住开火滑视角（含独立倍率）、Y 轴反转、辅助瞄准强度、主音量、打击反馈、帧率显示</strong>；所有改动即时生效并保存在本机。波次三选一新增「连击稳定器 / 相位电容 / 反冲装甲 / 弱点标定 / 战术记录仪」等低数值强化，连击达到 10 / 25 / 50 / 100 时会有里程碑播报。</p></div>
     <p class="modal-lead" style="margin-top:16px">首页「威胁校准」共四档：新兵 10 波、标准 15 波、噩梦 20 波，通关任意战役后解锁「极限」25 波。难度同时影响敌人强度、掉落率、积分倍率与通关波数。</p>
     <div class="board-note"><h3>希沃白板 / 教学一体机</h3><p>首页「设备适配」选择「白板大屏」：左下角<strong>「移动 / MOVE」高对比圆形摇杆</strong>常显（含方向箭头与中心十字），右侧滑动转向，右下 <kbd>FIRE</kbd> 开火，底部技能排含跳跃 / 滑铲 / 冲刺 / 脉冲 / 超载 / 切枪 / 瞄准 / 演示。全部按钮 ≥64px，支持红外多点触控，弹药打空自动装填，无需键盘鼠标。点 <kbd>AUTO</kbd> 开启课堂演示（自动锁敌开火）；<kbd>◎</kbd> 为精确瞄准。</p></div>
     <div class="board-note" style="border-color:#ff4d6d44"><h3>越界协议 // OVERBOUND 作弊码</h3><p>单机训练用外挂。游戏中直接敲字母触发（大小写均可）：<kbd>LOCKON</kbd> 锁头、<kbd>AUTOFIRE</kbd> 自动射击、<kbd>GODMODE</kbd> 无敌、<kbd>INFINITY</kbd> 无限弹药、<kbd>XRAY</kbd> 透视、<kbd>TIMESLIP</kbd> 子弹时间、<kbd>PURGE</kbd> 清场、<kbd>ARSENAL</kbd> 全武器、<kbd>RECHARGE</kbd> 回满、<kbd>OVERBOUND</kbd> 全开、<kbd>STANDDOWN</kbd> 全关。按 <kbd>&#96;</kbd> 或 <kbd>↑↑↓↓←→←→BA</kbd> 展开作弊清单。</p></div>`
@@ -63,11 +65,111 @@ function careerTemplate() {
     <div class="achievement-list">${ACHIEVEMENTS.map((item) => `<div class="achievement-item ${unlocked.has(item.id) ? 'unlocked' : ''}"><i>${unlocked.has(item.id) ? '◆' : '◇'}</i><div><strong>${item.name}</strong><small>${item.desc}</small></div></div>`).join('')}</div>`;
 }
 
+/** 1.1.0 系统设置面板：所有改动即时生效并写入 localStorage。 */
+function settingsTemplate() {
+  const slider = (key, label, hint, min, max, step) => `
+    <label class="setting-row">
+      <span>${label}<small>${hint}</small></span>
+      <input type="range" data-setting="${key}" min="${min}" max="${max}" step="${step}">
+      <b class="setting-value" data-value-for="${key}"></b>
+    </label>`;
+  const toggle = (key, label, hint) => `
+    <label class="setting-row switch-row">
+      <span>${label}<small>${hint}</small></span>
+      <input type="checkbox" data-setting="${key}"><i class="switch-ui"></i>
+    </label>`;
+  return `
+    <div class="eyebrow">SYSTEM CONFIG / NEURAL INTERFACE</div>
+    <h2 id="modal-title">系统设置<span>.</span></h2>
+    <p class="modal-lead">所有调整<strong>即时生效</strong>并保存在本机。键鼠与触屏灵敏度分开记忆；游戏中按 <kbd>ESC</kbd> 暂停后也能随时打开本页微调手感。</p>
+    <div class="settings-grid">
+      <section class="settings-group">
+        <h3>⌖ 瞄准 / 视角</h3>
+        ${slider('mouseSensitivity', '键鼠灵敏度', '鼠标移动 → 视角转动速度', 0.3, 2.5, 0.05)}
+        ${slider('touchSensitivity', '触屏灵敏度', '右侧滑动 / 白板转向速度', 0.3, 2.5, 0.05)}
+        ${toggle('fireLook', '按住开火键滑视角', '手指按住 FIRE 时滑动也能转向，边打边瞄（主流 FPS 手感）')}
+        ${slider('fireLookSensitivity', '开火滑视角倍率', '相对触屏灵敏度的倍率，建议略低', 0.3, 1.6, 0.05)}
+        ${toggle('invertY', '纵向反转', '上下视角方向反转')}
+      </section>
+      <section class="settings-group">
+        <h3>◎ 战斗辅助</h3>
+        ${slider('aimAssist', '辅助瞄准强度', '0% 关闭 · 100% 标准 · 150% 增强', 0, 150, 5)}
+        <p class="setting-note">触屏 / 白板自带轻度辅助瞄准；键鼠端需先在波次三选一领取「战术辅助瞄具」才生效，强化等级叠加在此之上。设为 0% 时全部关闭。仅影响吸附范围，<b>不增加任何伤害</b>。</p>
+        ${slider('feedback', '打击反馈强度', '命中 / 爆炸时的镜头震动幅度，晕动敏感可下调', 0, 150, 5)}
+      </section>
+      <section class="settings-group">
+        <h3>◈ 画面 / 声音</h3>
+        ${slider('volume', '主音量', '音效总音量', 0, 100, 5)}
+        <label class="setting-row switch-row">
+          <span>音效开关<small>关闭后完全静音</small></span>
+          <input type="checkbox" id="setting-audio-enabled"><i class="switch-ui"></i>
+        </label>
+        ${toggle('showFps', '显示帧率', '在画面左侧显示实时 FPS，便于判断性能')}
+      </section>
+    </div>
+    <div class="settings-footer"><button id="settings-reset" class="secondary-button">恢复默认</button><span>设置仅保存在本机浏览器 · 不会上传 · 改动立即生效</span></div>`;
+}
+
+function formatSetting(key, value) {
+  if (['aimAssist', 'volume', 'feedback'].includes(key)) return `${Math.round(value)}%`;
+  if (['mouseSensitivity', 'touchSensitivity', 'fireLookSensitivity'].includes(key)) return `${Number(value).toFixed(2)}×`;
+  return String(value);
+}
+
+/** 把设置应用到运行时（音量、帧率角标、音效按钮状态）。其余项由 Game 每帧直接读取。 */
+function applySettings() {
+  game?.audio?.setVolume(settings.volume);
+  $('#fps-counter')?.classList.toggle('visible', settings.showFps);
+  $('#audio-toggle')?.classList.toggle('muted', !game?.audio?.enabled || settings.volume === 0);
+}
+
+function bindSettingsPanel() {
+  const root = $('#modal-content');
+  const sync = () => {
+    root.querySelectorAll('[data-setting]').forEach((input) => {
+      const key = input.dataset.setting;
+      const value = settings[key];
+      if (input.type === 'checkbox') input.checked = Boolean(value);
+      else input.value = String(value);
+      const out = root.querySelector(`[data-value-for="${key}"]`);
+      if (out) out.textContent = formatSetting(key, value);
+    });
+    const audioChk = root.querySelector('#setting-audio-enabled');
+    if (audioChk) audioChk.checked = Boolean(game?.audio?.enabled);
+  };
+  root.querySelectorAll('[data-setting]').forEach((input) => {
+    input.addEventListener('input', () => {
+      setSetting(input.dataset.setting, input.type === 'checkbox' ? input.checked : Number(input.value));
+      applySettings();
+      sync();
+    });
+  });
+  root.querySelector('#setting-audio-enabled')?.addEventListener('change', (event) => {
+    if (!game?.audio) return;
+    game.audio.enabled = event.target.checked;
+    if (game.audio.enabled) game.audio.init();
+    try { localStorage.setItem('nexus-audio', game.audio.enabled ? '1' : '0'); } catch (_) { /* ignore */ }
+    applySettings();
+    sync();
+  });
+  root.querySelector('#settings-reset')?.addEventListener('click', () => {
+    resetSettings();
+    if (game?.audio) { game.audio.enabled = true; game.audio.init(); }
+    try { localStorage.setItem('nexus-audio', '1'); } catch (_) { /* ignore */ }
+    applySettings();
+    sync();
+    toast('设置已恢复默认', 1800);
+  });
+  sync();
+}
+
 function showModal(type) {
   $('#modal-content').innerHTML = type === 'career' ? careerTemplate()
     : type === 'armory' ? armoryTemplate()
-      : modalTemplates[type];
+      : type === 'settings' ? settingsTemplate()
+        : modalTemplates[type];
   $('#modal-backdrop').classList.add('active');
+  if (type === 'settings') bindSettingsPanel();
 }
 function closeModal() { $('#modal-backdrop').classList.remove('active'); }
 $$('[data-modal]').forEach((button) => button.addEventListener('click', () => showModal(button.dataset.modal)));
@@ -402,11 +504,13 @@ function showUpgrades(payload) {
   $('#free-choices').innerHTML = freeChoices.map((up, index) => {
     const picked = freePicked && freePickIndex === index;
     const dimmed = freePicked && freePickIndex !== index;
+    const owned = up.levelOf ? up.levelOf(game) : 0; // 1.1.0：可叠加强化显示当前等级
     return `<button class="free-card${picked ? ' picked' : ''}${dimmed ? ' dimmed' : ''}" data-free="${index}" ${freePicked && !picked ? 'disabled' : ''}>
       <span class="free-num">0${index + 1}</span>
       <div class="free-icon">${up.icon}</div>
       <h3>${up.name}</h3>
       <p>${up.desc}</p>
+      ${owned > 0 ? `<small class="free-owned">当前 Lv.${owned} · 可叠加</small>` : ''}
       ${picked ? '<b class="free-done">已领取 ✓</b>' : '<b class="free-pick">领取 ↗</b>'}
     </button>`;
   }).join('');
@@ -572,13 +676,35 @@ $('#quit-button').addEventListener('click', () => game.quit());
 $('#end-quit-button').addEventListener('click', () => game.quit());
 $('#audio-toggle').addEventListener('click', () => {
   const enabled = game.audio.toggle();
-  $('#audio-toggle').classList.toggle('muted', !enabled);
   localStorage.setItem('nexus-audio', enabled ? '1' : '0');
+  applySettings();
 });
 if (localStorage.getItem('nexus-audio') === '0') {
   game.audio.enabled = false;
-  $('#audio-toggle').classList.add('muted');
 }
+// 应用已保存的设置（音量 / 帧率角标 / 音效按钮状态）
+applySettings();
+// 便于在控制台或设置面板调试：暴露设置单例
+window.nexusSettings = settings;
+window.nexusSettingsApi = { setSetting, resetSettings, defaults: SETTINGS_DEFAULTS, applySettings };
+
+// 帧率角标：只统计不额外渲染，关闭时也不产生 DOM 写入
+let fpsFrames = 0;
+let fpsStamp = performance.now();
+function fpsTick(now) {
+  fpsFrames += 1;
+  if (now - fpsStamp >= 1000) {
+    const value = Math.round(fpsFrames * 1000 / (now - fpsStamp));
+    if (settings.showFps) {
+      const el = $('#fps-counter');
+      if (el) el.textContent = `${value} FPS`;
+    }
+    fpsFrames = 0;
+    fpsStamp = now;
+  }
+  requestAnimationFrame(fpsTick);
+}
+requestAnimationFrame(fpsTick);
 
 document.addEventListener('keydown', (event) => {
   if (event.code === 'Escape' && $('#modal-backdrop').classList.contains('active')) closeModal();

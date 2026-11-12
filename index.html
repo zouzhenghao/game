@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#05090d" />
-    <meta name="description" content="NEXUS STRIKE 零界突击 2.0 正式版——浏览器里的赛博科技风 3D 第一人称射击游戏。15 把武器、9 类敌人、4 种模式、战后补给站与肉鸽强化、13 种战术技能卡、三阶段整备、战术任务与故事线、NPC 商人、电脑/手机/希沃白板三端适配。" />
-    <title>NEXUS STRIKE // 零界突击 2.0 正式版</title>
+    <meta name="description" content="NEXUS STRIKE 零界突击 1.1.0 正式版——浏览器里的赛博科技风 3D 第一人称射击游戏。15 把武器、9 类敌人、4 种模式、战后补给站与肉鸽强化、13 种战术技能卡、自定义灵敏度与辅助瞄准、按住开火滑视角、电脑/手机/希沃白板三端适配。" />
+    <title>NEXUS STRIKE // 零界突击 1.1.0 正式版</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305090d'/%3E%3Cpath d='M14 46V18h8l12 17V18h8v28h-8L22 29v17z' fill='%2354f7d2'/%3E%3Cpath d='M46 18h5v28h-5z' fill='%2354f7d2'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,6 +31,9 @@
           </nav>
           <div class="top-actions">
             <span class="server-status"><i></i> 本地作战系统在线</span>
+            <button id="settings-button" class="icon-button" data-modal="settings" title="系统设置" aria-label="系统设置">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3"/></svg>
+            </button>
             <button id="audio-toggle" class="icon-button" title="切换音效" aria-label="切换音效">
               <svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5Zm4 4a4 4 0 0 1 0 6m2-9a8 8 0 0 1 0 12"/></svg>
             </button>
@@ -39,7 +42,7 @@
 
         <main class="hero">
           <div class="hero-copy">
-            <div class="eyebrow"><span>NX-07</span> / 神经链接已建立 <em class="ver-tag">V2.0 正式版</em></div>
+            <div class="eyebrow"><span>NX-07</span> / 神经链接已建立 <em class="ver-tag">V1.1.0 正式版</em></div>
             <h1><span class="title-outline">零界</span><br />突击<span class="title-dot">.</span></h1>
             <div class="english-title">NEXUS STRIKE</div>
             <p class="hero-desc">城市防线已经失守。接入战术外骨骼，深入数据废墟，<br class="desktop-only" />15 把武器、战后补给站与章节战役，在合围完成前撕开最后一道缺口。</p>
@@ -106,7 +109,7 @@
         <footer class="menu-footer">
           <div class="record"><small>个人最佳纪录</small><strong id="best-score">000,000</strong><span>PTS</span></div>
           <div class="footer-line"></div>
-          <div class="system-info"><span>BUILD 1.0.0</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span><span id="device-badge">DEVICE / AUTO</span></div>
+          <div class="system-info"><span>BUILD 1.1.0</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span><span id="device-badge">DEVICE / AUTO</span></div>
           <div class="scroll-cue">系统待命 <i></i></div>
         </footer>
       </section>
@@ -143,6 +146,7 @@
         <div id="cheat-badge" class="cheat-badge"></div>
         <div id="cheat-toast" class="cheat-toast"></div>
         <div id="lock-reticle" class="lock-reticle"><i></i><i></i><i></i><i></i><b></b></div>
+        <div id="fps-counter" class="fps-counter">-- FPS</div>
 
         <div id="slowmo-vignette" class="slowmo-vignette"></div>
         <div id="glitch-flash" class="glitch-flash"></div>
@@ -199,7 +203,7 @@
       </section>
 
       <section id="pause-screen" class="screen overlay-screen">
-        <div class="overlay-card pause-card"><div class="eyebrow">TACTICAL LINK / SUSPENDED</div><h2>行动暂停<span>.</span></h2><p>神经链接保持中，战场时间已冻结。</p><div id="pause-build" class="pause-build"></div><button id="resume-button" class="primary-button"><span>继续行动</span><b>ESC</b><i>↗</i></button><button id="restart-button" class="secondary-button wide">重新开始</button><button id="quit-button" class="text-button">撤离至主菜单</button><div class="pause-tip">提示：冲刺期间可免疫所有伤害；能量满后按 F 释放超载</div></div>
+        <div class="overlay-card pause-card"><div class="eyebrow">TACTICAL LINK / SUSPENDED</div><h2>行动暂停<span>.</span></h2><p>神经链接保持中，战场时间已冻结。</p><div id="pause-build" class="pause-build"></div><button id="resume-button" class="primary-button"><span>继续行动</span><b>ESC</b><i>↗</i></button><button id="pause-settings-button" class="secondary-button wide" data-modal="settings">系统设置 · 灵敏度 / 辅助瞄准</button><button id="restart-button" class="secondary-button wide">重新开始</button><button id="quit-button" class="text-button">撤离至主菜单</button><div class="pause-tip">提示：冲刺期间可免疫所有伤害；能量满后按 F 释放超载</div></div>
       </section>
 
       <section id="upgrade-screen" class="screen overlay-screen">
