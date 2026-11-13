@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#05090d" />
-    <meta name="description" content="NEXUS STRIKE 零界突击 1.1.0 正式版——浏览器里的赛博科技风 3D 第一人称射击游戏。15 把武器、9 类敌人、4 种模式、战后补给站与肉鸽强化、13 种战术技能卡、自定义灵敏度与辅助瞄准、按住开火滑视角、电脑/手机/希沃白板三端适配。" />
-    <title>NEXUS STRIKE // 零界突击 1.1.0 正式版</title>
+    <meta name="description" content="NEXUS STRIKE 零界突击 2.0.0 正式版——浏览器里的赛博科技风 3D 第一人称射击游戏。15 把武器、9 类敌人、4 种模式、战后补给站与肉鸽强化、13 种战术技能卡、自定义灵敏度与辅助瞄准、按住开火滑视角、电脑/手机/希沃白板三端适配。" />
+    <title>NEXUS STRIKE // 零界突击 2.0.0 正式版</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305090d'/%3E%3Cpath d='M14 46V18h8l12 17V18h8v28h-8L22 29v17z' fill='%2354f7d2'/%3E%3Cpath d='M46 18h5v28h-5z' fill='%2354f7d2'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="./assets/index-RYiZzexU.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-B89URVY9.css">
+    <script type="module" crossorigin src="./assets/index-elkuvi1R.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DdbKH7Uc.css">
   </head>
   <body>
     <div id="app">
@@ -44,7 +44,7 @@
 
         <main class="hero">
           <div class="hero-copy">
-            <div class="eyebrow"><span>NX-07</span> / 神经链接已建立 <em class="ver-tag">V1.1.0 正式版</em></div>
+            <div class="eyebrow"><span>NX-07</span> / 神经链接已建立 <em class="ver-tag">V2.0.0 正式版</em></div>
             <h1><span class="title-outline">零界</span><br />突击<span class="title-dot">.</span></h1>
             <div class="english-title">NEXUS STRIKE</div>
             <p class="hero-desc">城市防线已经失守。接入战术外骨骼，深入数据废墟，<br class="desktop-only" />15 把武器、战后补给站与章节战役，在合围完成前撕开最后一道缺口。</p>
@@ -111,23 +111,23 @@
         <footer class="menu-footer">
           <div class="record"><small>个人最佳纪录</small><strong id="best-score">000,000</strong><span>PTS</span></div>
           <div class="footer-line"></div>
-          <div class="system-info"><span>BUILD 1.1.0</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span><span id="device-badge">DEVICE / AUTO</span></div>
+          <div class="system-info"><span>BUILD 2.0.0</span><span>WEBGL // ONLINE</span><span id="best-wave">最高波次 00</span><span id="device-badge">DEVICE / AUTO</span></div>
           <div class="scroll-cue">系统待命 <i></i></div>
         </footer>
       </section>
 
       <section id="hud" class="hud" aria-label="游戏状态界面">
+        <!-- B3-5：L1 常驻底色层（生命/护盾/弹药/波次/雷达/武器槽/操作） -->
+        <div id="hud-base" class="hud-layer">
         <div class="hud-top-left">
           <div class="operative-tag"><span>NX</span><div><small>作战单位</small><strong>幽灵 // 07</strong></div></div>
-          <div class="vital-row"><span>HP</span><div class="vital-bar"><i id="health-fill"></i></div><b id="health-value">100</b></div>
-          <div class="vital-row shield"><span>SH</span><div class="vital-bar"><i id="shield-fill"></i></div><b id="shield-value">50</b></div>
+          <div class="vital-row"><span>HP</span><div class="vital-bar"><i id="health-fill"></i></div><b id="health-value" class="nx-num">100</b></div>
+          <div class="vital-row shield"><span>SH</span><div class="vital-bar"><i id="shield-fill"></i></div><b id="shield-value" class="nx-num">50</b></div>
         </div>
-        <div class="wave-info"><small><span id="mode-label">核心行动</span><em id="difficulty-label">标准</em></small><div>WAVE <strong id="wave-value">01</strong><span id="wave-total">/ 10</span></div><b id="gauntlet-timer" class="gauntlet-timer"></b><p><i></i><span id="enemy-count">0 个敌对信号</span><i></i></p></div>
-        <div class="hud-top-right"><div class="score-box"><small>作战积分</small><strong id="score-value">000000</strong><span id="combo-value">× 1.0</span><em id="credits-value">0 CR</em></div><canvas id="radar" width="150" height="150" aria-label="战术雷达"></canvas></div>
+        <div class="wave-info"><small><span id="mode-label">核心行动</span><em id="difficulty-label">标准</em></small><div>WAVE <strong id="wave-value" class="nx-num">01</strong><span id="wave-total">/ 10</span></div><b id="gauntlet-timer" class="gauntlet-timer"></b><p><i></i><span id="enemy-count">0 个敌对信号</span><i></i></p></div>
+        <div class="hud-top-right"><div class="score-box"><small>作战积分</small><strong id="score-value" class="nx-num">000000</strong><span id="combo-value">× 1.0</span><em id="credits-value">0 CR</em></div><canvas id="radar" width="150" height="150" aria-label="战术雷达"></canvas></div>
         <div id="boss-hud" class="boss-hud"><div><span>守望者 // WARDEN</span><b>首领单位</b></div><div class="boss-bar"><i id="boss-fill"></i></div></div>
         <div id="objective" class="objective"><small id="objective-label">当前目标</small><strong id="objective-title">清除区域内敌人</strong><span id="objective-sub">保持移动，注意侧翼</span></div>
-        <div id="kill-feed" class="kill-feed"></div>
-        <div id="announcer" class="announcer"><small></small><strong></strong><p></p></div>
         <div id="crosshair" class="crosshair"><i></i><i></i><i></i><i></i><b></b><span id="red-dot"></span><span id="hitmarker"></span></div>
         <div id="combo-display" class="combo-display"><b id="combo-count">0</b><span>连击</span><em id="combo-mult">×1.0</em></div>
         <div id="scope-readout" class="scope-readout"></div>
@@ -136,24 +136,15 @@
           <div class="energy-head"><span><kbd>F</kbd> 核心超载</span><b id="overdrive-status">充能 0%</b></div>
           <div class="energy-bar"><i id="energy-fill"></i></div>
         </div>
-        <div class="weapon-hud"><div class="weapon-slots"><span data-slot="0" class="active">1</span><span data-slot="1">2</span><span data-slot="2">3</span><span data-slot="3">4</span><span data-slot="4">5</span><span data-slot="5">6</span></div><small id="weapon-class">突击步枪 // AUTO</small><h2 id="weapon-name">VX-9 <span>脉冲</span></h2><div class="ammo"><strong id="ammo-value">30</strong><span>/ <b id="reserve-value">180</b></span></div><div id="reload-hint" class="reload-hint">按 R 装填弹药</div></div>
+        <div class="weapon-hud"><div class="weapon-slots"><span data-slot="0" class="active">1</span><span data-slot="1">2</span><span data-slot="2">3</span><span data-slot="3">4</span><span data-slot="4">5</span><span data-slot="5">6</span></div><small id="weapon-class">突击步枪 // AUTO</small><h2 id="weapon-name">VX-9 <span>脉冲</span></h2><div class="ammo"><strong id="ammo-value" class="nx-num">30</strong><span>/ <b id="reserve-value">180</b></span></div><div id="reload-hint" class="reload-hint">按 R 装填弹药</div></div>
         <div id="skill-bar" class="skill-bar"></div>
         <button id="pause-button" class="hud-pause" aria-label="暂停游戏">Ⅱ</button>
-        <div id="damage-vignette" class="damage-vignette"></div>
-        <div id="damage-direction" class="damage-direction">⌄</div>
         <div id="interact-toast" class="interact-toast"></div>
-        <div id="damage-numbers" class="damage-numbers"></div>
-        <div id="achievement-toast" class="achievement-toast"><small>ACHIEVEMENT UNLOCKED</small><strong></strong><p></p></div>
         <div id="board-badge" class="board-badge"><span>SEEWO BOARD // 课堂模式</span><b id="board-demo-state">手动操作</b></div>
         <div id="cheat-badge" class="cheat-badge"></div>
         <div id="cheat-toast" class="cheat-toast"></div>
         <div id="lock-reticle" class="lock-reticle"><i></i><i></i><i></i><i></i><b></b></div>
         <div id="fps-counter" class="fps-counter">-- FPS</div>
-
-        <div id="slowmo-vignette" class="slowmo-vignette"></div>
-        <div id="glitch-flash" class="glitch-flash"></div>
-        <div id="combat-banner" class="combat-banner"><small></small><strong></strong><p></p></div>
-        <div id="story-banner" class="story-banner"><small></small><strong></strong><p></p></div>
 
         <div id="mobile-controls" class="mobile-controls">
           <div id="move-stick" class="touch-stick" aria-label="虚拟移动摇杆"><b class="stick-arrow up">▲</b><b class="stick-arrow down">▼</b><b class="stick-arrow left">◀</b><b class="stick-arrow right">▶</b><i></i><span class="stick-label">移动 / MOVE</span></div>
@@ -174,6 +165,20 @@
             <button id="mobile-demo" class="mobile-small demo board-only" aria-label="课堂演示">AUTO</button>
           </div>
           <div id="mobile-skills" class="mobile-skills"></div>
+        </div>
+        </div>
+        <!-- B3-5：L3 瞬时反馈层（命中飘字/击杀流/公告/顿帧闪/战斗横幅；state!=='playing' 时整体隐藏，避免遮挡暂停/整备卡片与 #pause-reason） -->
+        <div id="hud-feedback" class="hud-layer hud-feedback">
+        <div id="kill-feed" class="kill-feed"></div>
+        <div id="announcer" class="announcer"><small></small><strong></strong><p></p></div>
+        <div id="damage-vignette" class="damage-vignette"></div>
+        <div id="damage-direction" class="damage-direction">⌄</div>
+        <div id="damage-numbers" class="damage-numbers"></div>
+        <div id="achievement-toast" class="achievement-toast"><small>ACHIEVEMENT UNLOCKED</small><strong></strong><p></p></div>
+        <div id="slowmo-vignette" class="slowmo-vignette"></div>
+        <div id="glitch-flash" class="glitch-flash"></div>
+        <div id="combat-banner" class="combat-banner"><small></small><strong></strong><p></p></div>
+        <div id="story-banner" class="story-banner"><small></small><strong></strong><p></p></div>
         </div>
       </section>
 
@@ -205,7 +210,7 @@
       </section>
 
       <section id="pause-screen" class="screen overlay-screen">
-        <div class="overlay-card pause-card"><div class="eyebrow">TACTICAL LINK / SUSPENDED</div><h2>行动暂停<span>.</span></h2><p>神经链接保持中，战场时间已冻结。</p><div id="pause-build" class="pause-build"></div><button id="resume-button" class="primary-button"><span>继续行动</span><b>ESC</b><i>↗</i></button><button id="pause-settings-button" class="secondary-button wide" data-modal="settings">系统设置 · 灵敏度 / 辅助瞄准</button><button id="restart-button" class="secondary-button wide">重新开始</button><button id="quit-button" class="text-button">撤离至主菜单</button><div class="pause-tip">提示：冲刺期间可免疫所有伤害；能量满后按 F 释放超载</div></div>
+        <div class="overlay-card pause-card"><div class="eyebrow">TACTICAL LINK / SUSPENDED</div><h2>行动暂停<span>.</span></h2><p>神经链接保持中，战场时间已冻结。</p><div id="pause-reason" class="pause-reason"></div><div id="pause-build" class="pause-build"></div><button id="resume-button" class="primary-button"><span>继续行动</span><b>ESC</b><i>↗</i></button><button id="pause-settings-button" class="secondary-button wide" data-modal="settings">系统设置 · 灵敏度 / 辅助瞄准</button><button id="restart-button" class="secondary-button wide">重新开始</button><button id="quit-button" class="text-button">撤离至主菜单</button><div class="pause-tip">提示：冲刺期间可免疫所有伤害；能量满后按 F 释放超载</div></div>
       </section>
 
       <section id="upgrade-screen" class="screen overlay-screen">
@@ -246,7 +251,7 @@
       </section>
 
       <div id="modal-backdrop" class="modal-backdrop">
-        <div class="info-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button id="modal-close" class="modal-close" aria-label="关闭">×</button><div id="modal-content"></div></div>
+        <div class="info-modal nx-frame nx-cut" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button id="modal-close" class="modal-close" aria-label="关闭">×</button><div id="modal-content"></div></div>
       </div>
       <div id="rotate-notice">旋转设备以获得更佳作战体验</div>
     </div>
